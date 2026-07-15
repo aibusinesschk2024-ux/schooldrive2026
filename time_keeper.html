@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電子黒板用マルチタイムキーパー (休み時間無音化版)</title>
+    <style>
+        :root {
+            --bg-default: #fafafa;
+            --bg-normal: #e8f5e9; /* 薄い緑 */
+            --bg-warning: #fffde7; /* 薄い黄 */
+            --bg-danger: #ffebee; /* 薄い赤 */
+            --bg-break: #e3f2fd; /* 薄い青 */
+            
+            --text-main: #263238;
+            --accent-color: #37474f;
+            --btn-primary: #4caf50;
+            --btn-danger: #f44336;
+            --btn-neutral: #9e9e9e;
+            --btn-nav: #2196f3;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: var(--bg-default);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.5s ease;
+        }
+
+        header {
+            background-color: #ffffff;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #cfd8dc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .system-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .current-clock {
+            font-size: 1.8rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .screen {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .btn {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.15);
+        }
+
+        .btn-lg {
+            font-size: 1.8rem;
+            padding: 20px 35px;
+            border-radius: 16px;
+        }
+
+        .btn-primary { background-color: var(--btn-primary); color: white; }
+        .btn-danger { background-color: var(--btn-danger); color: white; }
+        .btn-neutral { background-color: var(--btn-neutral); color: white; }
+        .btn-nav { background-color: var(--btn-nav); color: white; }
+
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .home-card {
+            background: white;
+            border: 2px solid #cfd8dc;
+            border-radius: 20px;
+            padding: 30px 15px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .home-card h2 { font-size: 1.5rem; margin-bottom: 15px; color: var(--accent-color); white-space: nowrap; }
+        .home-card p { font-size: 1rem; color: #607d8b; white-space: nowrap; }
+
+        .setup-container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 2px solid #cfd8dc;
+        }
+
+        .import-box {
+            background-color: #f0fdf4;
+            border: 2px dashed #4caf50;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .setup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eceff1;
+            padding-bottom: 10px;
+        }
+
+        .setup-rows {
+            max-height: 240px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding-right: 10px;
+        }
+
+        .timetable-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 200px 80px;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 12px;
+            background: #f5f7f8;
+            padding: 8px;
+            border-radius: 12px;
+        }
+
+        .row-num { font-size: 1.2rem; font-weight: bold; text-align: center; color: #546e7a; }
+        .input-text { font-size: 1.2rem; padding: 10px; border: 2px solid #b0bec5; border-radius: 8px; width: 100%; }
+        
+        .time-display-trigger {
+            background: #ffffff;
+            border: 2px solid #b0bec5;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            color: var(--btn-nav);
+        }
+
+        .global-settings {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            background: #e1f5fe;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .global-settings input { width: 100px; text-align: center; }
+        .setup-actions { display: flex; justify-content: space-between; }
+
+        .timer-layout-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 25px;
+            width: 100%;
+            height: 100%;
+            max-width: 1400px;
+        }
+
+        .timer-main-panel {
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            border: 2px solid rgba(0,0,0,0.05);
+        }
+
+        .timer-timeline-panel {
+            background: white;
+            border-radius: 24px;
+            border: 2px solid #cfd8dc;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .timeline-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eceff1;
+            padding-bottom: 8px;
+            text-align: center;
+        }
+
+        .timeline-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 5px;
+        }
+
+        .timeline-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-item.past {
+            background: #e2e8f0;
+            color: #94a3b8;
+            border-color: #cbd5e1;
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .timeline-item.current {
+            background: #fff;
+            color: #1e3a8a;
+            border: 3px solid #3b82f6;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+            transform: scale(1.02);
+        }
+        .timeline-item.current::before {
+            content: "▶";
+            color: #3b82f6;
+            margin-right: 5px;
+            animation: blink 1s infinite;
+        }
+
+        .timeline-item.future {
+            color: #475569;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
+        .timer-status-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 2.5rem;
+            font-weight: bold;
+            padding: 0 20px;
+        }
+
+        .current-task-label { color: #37474f; }
+        .next-task-label { color: #78909c; font-size: 1.6rem; align-self: flex-end;}
+
+        .main-time-display {
+            font-size: 11rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -2px;
+            margin: 15px 0;
+            line-height: 1;
+        }
+
+        .progress-container {
+            width: 95%; background-color: rgba(0,0,0,0.05);
+            height: 25px; border-radius: 12px; overflow: hidden;
+            border: 2px solid rgba(0,0,0,0.1); margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%; height: 100%; background-color: #4caf50;
+            transition: width 1s linear, background-color 0.5s ease;
+        }
+
+        .control-panel { display: flex; gap: 12px; margin-bottom: 5px; flex-wrap: wrap; justify-content: center; }
+
+        .config-container {
+            width: 100%; max-width: 700px; background: white;
+            padding: 30px; border-radius: 20px; border: 2px solid #cfd8dc;
+            max-height: 90vh; overflow-y: auto;
+        }
+        .config-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; font-size: 1.1rem; font-weight: bold;
+        }
+        .config-row input[type="number"] { width: 100px; padding: 6px; font-size: 1rem; text-align: center; }
+        
+        .sound-setting-box {
+            background: #f5f7f8;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        .sound-setting-box label { display: block; margin-bottom: 4px; color: #455a64; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .modal-value {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 25px;
+            color: var(--accent-color);
+            background: #f0f4c3;
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .btn-calc {
+            font-size: 1.8rem;
+            padding: 20px;
+            background: #eceff1;
+            border: 2px solid #b0bec5;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .big-checkbox { width: 24px; height: 24px; margin-right: 8px; cursor: pointer; }
+        .toggle-label { display: flex; align-items: center; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="system-title" onclick="goHome()" style="cursor:pointer;">🏠 タイムキーパー</div>
+        <div class="current-clock" id="current-clock">00:00:00</div>
+    </header>
+
+    <main>
+        <!-- 1. ホーム画面 -->
+        <section id="screen-home" class="screen active">
+            <div class="home-grid">
+                <div class="home-card" onclick="switchScreen('timetable-setup')">
+                    <h2>📅 時間割モード</h2><p>複数コマと休み時間を連続消化</p>
+                </div>
+                <div class="home-card" onclick="openSimpleTimer()">
+                    <h2>⏱️ シンプルタイマー</h2><p>決まった時間をカウントダウン</p>
+                </div>
+                <div class="home-card" onclick="openStopwatch()">
+                    <h2>🏃 ストップウォッチ</h2><p>経過時間をカウントアップ</p>
+                </div>
+            </div>
+            <button class="btn btn-neutral" style="margin-top: 40px; font-size: 1.2rem;" onclick="switchScreen('general-config')">⚙️ 色変化・オリジナル音設定</button>
+        </section>
+
+        <!-- 2. 時間割設定画面 -->
+        <section id="screen-timetable-setup" class="screen">
+            <div class="setup-container">
+                <div class="import-box">
+                    <span style="font-weight: bold; font-size: 14px; color: #1b5e20; display: block; margin-bottom: 5px;">📥 模試作成アプリからデータを読込</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="import-code-input" placeholder="連携コードをここに貼り付け" style="flex: 1; padding: 6px 10px; border: 1px solid #a5d6a7; border-radius: 6px; font-size: 13px;">
+                        <button class="btn btn-primary" style="padding: 6px 12px; min-width: auto; font-size: 13px; border-radius: 6px;" onclick="importFromText()">読込</button>
+                        <span style="font-size: 12px; color: #666;">または</span>
+                        <input type="file" id="import-file-input" accept=".json" style="font-size: 12px; max-width: 180px;" onchange="importFromFile(event)">
+                    </div>
+                </div>
+
+                <div class="setup-header">
+                    <h2>時間割スケジュール設定</h2>
+                    <button class="btn btn-nav" onclick="addTimetableRow()">＋ コマを追加</button>
+                </div>
+                <div class="global-settings">
+                    <span>⏳ 各コマの間の休み時間:</span>
+                    <input type="number" id="break-duration-input" class="input-text" min="0" max="60" value="10"><span>分</span>
+                </div>
+                <div class="setup-rows" id="timetable-rows-container"></div>
+                <div class="setup-actions">
+                    <button class="btn btn-neutral" onclick="goHome()">戻る</button>
+                    <button class="btn btn-primary btn-lg" onclick="startTimetableMode()">タイマー開始 ▶</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. タイマー実行画面 -->
+        <section id="screen-timer-run" class="screen">
+            <div class="timer-layout-wrapper">
+                
+                <div class="timer-main-panel">
+                    <div class="timer-status-bar">
+                        <div id="run-current-label" class="current-task-label">準備中</div>
+                        <div id="run-next-label" class="next-task-label">次: なし</div>
+                    </div>
+                    <div id="run-time-display" class="main-time-display">00:00</div>
+                    <div class="progress-container"><div id="run-progress-bar" class="progress-bar"></div></div>
+                    <div class="control-panel">
+                        <button id="btn-pause" class="btn btn-lg btn-primary" onclick="togglePause()">一時停止</button>
+                        <button class="btn btn-lg btn-neutral" style="background-color: #ff9800; color: white;" onclick="resetCurrentPhase()">リセット ↩️</button>
+                        <button class="btn btn-lg btn-nav" onclick="skipCurrentPhase()">スキップ ⏭️</button>
+                        <button class="btn btn-lg btn-danger" onclick="stopTimer()">終了 🛑</button>
+                    </div>
+                </div>
+
+                <div class="timer-timeline-panel">
+                    <div class="timeline-title">📋 本日のタイムライン</div>
+                    <div id="timeline-list-container" class="timeline-list"></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 4. ストップウォッチ画面 -->
+        <section id="screen-stopwatch" class="screen">
+            <div class="timer-container">
+                <div class="timer-status-bar"><div class="current-task-label">🏃 ストップウォッチ</div><div></div></div>
+                <div id="stopwatch-display" class="main-time-display">00:00.0</div>
+                <div style="height: 25px; margin-bottom: 30px;"></div>
+                <div class="control-panel">
+                    <button id="btn-sw-start" class="btn btn-lg btn-primary" onclick="toggleStopwatch()">スタート</button>
+                    <button class="btn btn-lg btn-neutral" onclick="resetStopwatch()">リセット</button>
+                    <button class="btn btn-lg btn-danger" onclick="goHome()">戻る</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. 共通環境設定画面 -->
+        <section id="screen-general-config" class="screen">
+            <div class="config-container">
+                <h2 style="margin-bottom: 20px; text-align: center;">カラー＆アラート設定</h2>
+                
+                <div class="config-row">
+                    <span>🎨 背景色の変化 (警告・危険):</span>
+                    <label class="toggle-label"><input type="checkbox" id="cfg-color-enabled" class="big-checkbox"> 有効にする</label>
+                </div>
+                <div class="config-row" style="padding-left: 30px;"><span>⚠️ 警告（黄色）になる残り時間:</span><div><input type="number" id="cfg-warn-min" min="1" value="5"> 分前</div></div>
+                <div class="config-row" style="padding-left: 30px;"><span>🚨 危険（赤色）になる残り時間:</span><div><input type="number" id="cfg-danger-min" min="1" value="1"> 分前</div></div>
+                
+                <hr style="margin: 20px 0; border: 1px solid #cfd8dc;">
+                
+                <div class="config-row">
+                    <span>🔊 アラーム・操作音:</span>
+                    <label class="toggle-label"><input type="checkbox" id="cfg-sound-enabled" class="big-checkbox"> 有効にする</label>
+                </div>
+
+                <div id="custom-sound-section" style="padding-left: 10px; margin-bottom: 20px;">
+                    <p style="font-size: 0.9rem; color:#546e7a; margin-bottom: 10px;">🎵 チャイム等の自作音声ファイルを登録できます（空欄なら内蔵の電子音）</p>
+                    
+                    <div class="sound-setting-box">
+                        <label>▶ 開始チャイム (コマ開始時):</label>
+                        <input type="file" id="audio-start" accept="audio/*" onchange="loadCustomAudio('start', event)">
+                        <button type="button" style="padding:2px 6px; font-size:11px;" onclick="clearCustomAudio('start')">元に戻す</button>
+                    </div>
+                    <div class="sound-setting-box">
+                        <label>⚠️ 警告アナウンス (残り5分等):</label>
+                        <input type="file" id="audio-warn" accept="audio/*" onchange="loadCustomAudio('warn', event)">
+                        <button type="button" style="padding:2px 6px; font-size:11px;" onclick="clearCustomAudio('warn')">元に戻す</button>
+                    </div>
+                    <div class="sound-setting-box">
+                        <label>🚨 危険アナウンス (残り1分等):</label>
+                        <input type="file" id="audio-danger" accept="audio/*" onchange="loadCustomAudio('danger', event)">
+                        <button type="button" style="padding:2px 6px; font-size:11px;" onclick="clearCustomAudio('danger')">元に戻す</button>
+                    </div>
+                    <div class="sound-setting-box">
+                        <label>🛑 終了チャイム (時間終了時):</label>
+                        <input type="file" id="audio-end" accept="audio/*" onchange="loadCustomAudio('end', event)">
+                        <button type="button" style="padding:2px 6px; font-size:11px;" onclick="clearCustomAudio('end')">元に戻す</button>
+                    </div>
+                </div>
+
+                <div class="config-row" style="margin-top: 20px;">
+                    <button class="btn btn-neutral" onclick="goHome()" style="width: 100%;">設定を保存して戻る</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="time-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title" style="margin-bottom: 15px; font-size: 1.5rem;">時間を設定</h3>
+            <div id="modal-value-display" class="modal-value">0 分</div>
+            <div class="modal-grid">
+                <button class="btn-calc" onclick="addModalTime(1)">+1分</button>
+                <button class="btn-calc" onclick="addModalTime(5)">+5分</button>
+                <button class="btn-calc" onclick="addModalTime(10)">+10分</button>
+                <button class="btn-calc" onclick="addModalTime(30)">+30分</button>
+                <button class="btn-calc" style="grid-column: span 2; background-color: #ffcdd2; color: #b71c1c;" onclick="clearModalTime()">クリア</button>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-neutral" onclick="closeModal()">キャンセル</button>
+                <button class="btn btn-primary" onclick="commitModalTime()">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'home';
+        let timetableData = [
+            { id: 1, name: '1時間目', duration: 50 },
+            { id: 2, name: '2時間目', duration: 50 },
+            { id: 3, name: '3時間目', duration: 50 }
+        ];
+        let nextRowId = 4;
+        let currentTargetRowId = null;
+        let currentTargetType = 'timetable';
+        let modalTemporaryValue = 0;
+
+        let timerInterval = null, isPaused = false;
+        let phaseQueue = [], currentPhaseIndex = 0;
+        let phaseTotalSeconds = 0, phaseRemainingSeconds = 0;
+
+        let stopwatchInterval = null, stopwatchStartTime = 0;
+        let stopwatchElapsed = 0, isStopwatchRunning = false;
+
+        let config = { warnMin: 5, dangerMin: 1, breakDuration: 10, colorEnabled: true, soundEnabled: true };
+        let customAudios = { start: null, warn: null, danger: null, end: null };
+
+        window.onload = function() {
+            loadConfig();
+            loadTimetableData();
+            initClock();
+            renderTimetableSetup();
+        };
+
+        function initClock() {
+            setInterval(() => {
+                document.getElementById('current-clock').textContent = new Date().toLocaleTimeString('ja-JP', { hour12: false });
+            }, 1000);
+        }
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(`screen-${screenId}`).classList.add('active');
+            if (screenId !== 'timer-run') document.body.style.backgroundColor = 'var(--bg-default)';
+        }
+
+        function goHome() {
+            stopTimer(); stopStopwatch();
+            saveConfig(); saveTimetableData();
+            switchScreen('home');
+        }
+
+        function saveConfig() {
+            config.warnMin = parseInt(document.getElementById('cfg-warn-min').value) || 5;
+            config.dangerMin = parseInt(document.getElementById('cfg-danger-min').value) || 1;
+            config.breakDuration = parseInt(document.getElementById('break-duration-input').value) || 0;
+            config.colorEnabled = document.getElementById('cfg-color-enabled').checked;
+            config.soundEnabled = document.getElementById('cfg-sound-enabled').checked;
+            localStorage.setItem('tk_config', JSON.stringify(config));
+            
+            try {
+                localStorage.setItem('tk_custom_audios', JSON.stringify(customAudios));
+            } catch(e) {
+                console.warn("ローカルストレージの容量制限のため音源の保存をスキップしました。");
+            }
+        }
+
+        function loadConfig() {
+            const saved = localStorage.getItem('tk_config');
+            if (saved) {
+                config = { ...config, ...JSON.parse(saved) };
+                document.getElementById('cfg-warn-min').value = config.warnMin;
+                document.getElementById('cfg-danger-min').value = config.dangerMin;
+                document.getElementById('break-duration-input').value = config.breakDuration;
+                document.getElementById('cfg-color-enabled').checked = config.colorEnabled;
+                document.getElementById('cfg-sound-enabled').checked = config.soundEnabled;
+            } else {
+                document.getElementById('cfg-color-enabled').checked = config.colorEnabled;
+                document.getElementById('cfg-sound-enabled').checked = config.soundEnabled;
+            }
+
+            const savedAudios = localStorage.getItem('tk_custom_audios');
+            if (savedAudios) customAudios = { ...customAudios, ...JSON.parse(savedAudios) };
+        }
+
+        function loadCustomAudio(type, event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { customAudios[type] = e.target.result; };
+            reader.readAsDataURL(file);
+        }
+
+        function clearCustomAudio(type) {
+            customAudios[type] = null; document.getElementById(`audio-${type}`).value = ""; alert("内蔵電子音に戻しました。");
+        }
+
+        function saveTimetableData() {
+            timetableData.forEach(row => {
+                const nameInput = document.getElementById(`v-name-${row.id}`);
+                if (nameInput) row.name = nameInput.value;
+            });
+            localStorage.setItem('tk_timetable', JSON.stringify(timetableData));
+        }
+
+        function loadTimetableData() {
+            const saved = localStorage.getItem('tk_timetable');
+            if (saved) {
+                timetableData = JSON.parse(saved);
+                if(timetableData.length > 0) nextRowId = Math.max(...timetableData.map(r => r.id)) + 1;
+            }
+        }
+
+        function renderTimetableSetup() {
+            const container = document.getElementById('timetable-rows-container');
+            container.innerHTML = '';
+            timetableData.forEach((row, index) => {
+                const div = document.createElement('div');
+                div.className = 'timetable-row';
+                div.innerHTML = `
+                    <div class="row-num">${index + 1}コマ</div>
+                    <div><input type="text" id="v-name-${row.id}" class="input-text" value="${row.name}" list="subject-presets" placeholder="直接入力または選択"></div>
+                    <div id="v-time-${row.id}" class="time-display-trigger" onclick="openModal(${row.id}, 'timetable')">${row.duration} 分</div>
+                    <div><button class="btn btn-danger" style="padding:10px; font-size:1rem;" onclick="removeTimetableRow(${row.id})">削除</button></div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addTimetableRow() {
+            saveTimetableData();
+            timetableData.push({ id: nextRowId++, name: `${timetableData.length + 1}時間目`, duration: 50 });
+            renderTimetableSetup();
+        }
+
+        function removeTimetableRow(id) {
+            saveTimetableData();
+            timetableData = timetableData.filter(r => r.id !== id);
+            renderTimetableSetup();
+        }
+
+        function processImportedData(data) {
+            try {
+                if (!data.timetable || !Array.isArray(data.timetable)) throw new Error();
+                config.breakDuration = data.breakDuration || 0;
+                document.getElementById('break-duration-input').value = config.breakDuration;
+                timetableData = data.timetable.map((item, idx) => ({ id: idx + 1, name: item.name, duration: item.duration }));
+                nextRowId = timetableData.length + 1;
+                renderTimetableSetup();
+                alert(`「${data.dayLabel || '模試スケジュール'}」をインポートしました！`);
+            } catch(e) { alert("データの読込に失敗しました。"); }
+        }
+
+        function importFromText() {
+            const code = document.getElementById('import-code-input').value.trim();
+            if(!code) return alert("連携コードを入力してください。");
+            try { processImportedData(JSON.parse(code)); document.getElementById('import-code-input').value = ""; } catch(e) { alert("形式エラー"); }
+        }
+
+        function importFromFile(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) { try { processImportedData(JSON.parse(e.target.result)); } catch(err) { alert("読込失敗"); } };
+            reader.readAsText(file); event.target.value = "";
+        }
+
+        function renderTimelineUI() {
+            const container = document.getElementById('timeline-list-container');
+            container.innerHTML = '';
+            phaseQueue.forEach((phase, idx) => {
+                const div = document.createElement('div');
+                div.className = 'timeline-item';
+                if (idx < currentPhaseIndex) div.classList.add('past');
+                else if (idx === currentPhaseIndex) div.classList.add('current');
+                else div.classList.add('future');
+                div.innerHTML = `<span>${phase.label}</span><span>${Math.floor(phase.durationSec / 60)}分</span>`;
+                container.appendChild(div);
+            });
+        }
+
+        function startTimetableMode() {
+            saveTimetableData(); saveConfig();
+            phaseQueue = [];
+            timetableData.forEach((row, idx) => {
+                if (row.duration > 0) {
+                    phaseQueue.push({ label: row.name, durationSec: row.duration * 60, type: 'work' });
+                    if (idx < timetableData.length - 1 && config.breakDuration > 0) {
+                        phaseQueue.push({ label: '休み時間', durationSec: config.breakDuration * 60, type: 'break' });
+                    }
+                }
+            });
+            if (phaseQueue.length === 0) return alert('有効な時間がありません。');
+            currentPhaseIndex = 0; initPhase(); switchScreen('timer-run');
+        }
+
+        function startSimpleTimer(mins) {
+            if (mins <= 0) return;
+            phaseQueue = [{ label: 'カウントダウン', durationSec: mins * 60, type: 'work' }];
+            currentPhaseIndex = 0; initPhase(); switchScreen('timer-run');
+        }
+
+        function initPhase() {
+            const currentPhase = phaseQueue[currentPhaseIndex];
+            phaseTotalSeconds = currentPhase.durationSec;
+            phaseRemainingSeconds = phaseTotalSeconds;
+            isPaused = false;
+            document.getElementById('btn-pause').textContent = '一時停止';
+            document.getElementById('btn-pause').className = 'btn btn-lg btn-primary';
+            document.getElementById('run-current-label').textContent = currentPhase.label;
+            document.getElementById('run-next-label').textContent = (currentPhaseIndex + 1 < phaseQueue.length) ? `次: ${phaseQueue[currentPhaseIndex + 1].label}` : '次: なし';
+            
+            updateTimerUI();
+            renderTimelineUI();
+            
+            // 💡 修正：現在の工程が「テスト本番(work)」のときだけ開始音を鳴らす
+            if (currentPhase.type === 'work') {
+                playSystemSound('start');
+            }
+            
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(tickTimer, 1000);
+        }
+
+        function tickTimer() {
+            if (isPaused) return;
+            phaseRemainingSeconds--;
+            updateTimerUI();
+            
+            const p = phaseQueue[currentPhaseIndex];
+            // 💡 修正：テスト本番中(work)のときだけ警告音・危険音を計算して鳴らす
+            if (p.type === 'work') {
+                if (phaseRemainingSeconds === config.warnMin * 60) playSystemSound('warn');
+                else if (phaseRemainingSeconds === config.dangerMin * 60) playSystemSound('danger');
+            }
+
+            if (phaseRemainingSeconds <= 0) {
+                clearInterval(timerInterval);
+                
+                // 💡 修正：終わった工程が「テスト本番(work)」だったときだけ終了音を鳴らす
+                if (p.type === 'work') {
+                    playSystemSound('end');
+                }
+                
+                nextPhase();
+            }
+        }
+
+        function nextPhase() {
+            currentPhaseIndex++;
+            if (currentPhaseIndex < phaseQueue.length) {
+                initPhase();
+            } else {
+                document.getElementById('run-current-label').textContent = 'すべての工程が終了しました';
+                document.getElementById('run-next-label').textContent = '';
+                document.getElementById('run-time-display').textContent = '00:00';
+                document.body.style.backgroundColor = 'var(--bg-default)';
+                document.getElementById('run-progress-bar').style.width = '0%';
+                if (timerInterval) clearInterval(timerInterval);
+                renderTimelineUI();
+            }
+        }
+
+        function resetCurrentPhase() {
+            if (confirm('現在のフェーズの最初に戻しますか？')) {
+                const currentPhase = phaseQueue[currentPhaseIndex];
+                phaseRemainingSeconds = currentPhase.durationSec;
+                isPaused = true;
+                const btn = document.getElementById('btn-pause');
+                btn.textContent = '再開 ▶';
+                btn.className = 'btn btn-lg btn-nav';
+                updateTimerUI();
+            }
+        }
+
+        function updateTimerUI() {
+            const h = Math.floor(phaseRemainingSeconds / 3600);
+            const m = Math.floor((phaseRemainingSeconds % 3600) / 60);
+            const s = phaseRemainingSeconds % 60;
+            
+            const timeDisplay = document.getElementById('run-time-display');
+            if (h > 0) {
+                timeDisplay.textContent = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                timeDisplay.style.fontSize = '9rem';
+            } else {
+                timeDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                timeDisplay.style.fontSize = '11rem';
+            }
+
+            document.getElementById('run-progress-bar').style.width = `${(phaseRemainingSeconds / phaseTotalSeconds) * 100}%`;
+
+            const p = phaseQueue[currentPhaseIndex];
+            if (!config.colorEnabled) {
+                if (p.type === 'break') {
+                    document.body.style.backgroundColor = 'var(--bg-break)';
+                    document.getElementById('run-progress-bar').style.backgroundColor = 'var(--btn-nav)';
+                } else {
+                    document.body.style.backgroundColor = 'var(--bg-normal)';
+                    document.getElementById('run-progress-bar').style.backgroundColor = 'var(--btn-primary)';
+                }
+            } else {
+                if (p.type === 'break') {
+                    document.body.style.backgroundColor = 'var(--bg-break)';
+                    document.getElementById('run-progress-bar').style.backgroundColor = 'var(--btn-nav)';
+                } else {
+                    if (phaseRemainingSeconds <= config.dangerMin * 60) {
+                        document.body.style.backgroundColor = 'var(--bg-danger)';
+                        document.getElementById('run-progress-bar').style.backgroundColor = 'var(--btn-danger)';
+                    } else if (phaseRemainingSeconds <= config.warnMin * 60) {
+                        document.body.style.backgroundColor = 'var(--bg-warning)';
+                        document.getElementById('run-progress-bar').style.backgroundColor = '#ffeb3b';
+                    } else {
+                        document.body.style.backgroundColor = 'var(--bg-normal)';
+                        document.getElementById('run-progress-bar').style.backgroundColor = 'var(--btn-primary)';
+                    }
+                }
+            }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('btn-pause');
+            btn.textContent = isPaused ? '再開 ▶' : '一時停止';
+            btn.className = isPaused ? 'btn btn-lg btn-nav' : 'btn btn-lg btn-primary';
+        }
+
+        function skipCurrentPhase() { if(confirm('現在のフェーズをスキップしますか？')){ clearInterval(timerInterval); nextPhase(); } }
+        function stopTimer() { if (timerInterval) clearInterval(timerInterval); document.body.style.backgroundColor = 'var(--bg-default)'; switchScreen('home'); }
+
+        function openStopwatch() { resetStopwatch(); switchScreen('stopwatch'); }
+        function toggleStopwatch() {
+            const btn = document.getElementById('btn-sw-start');
+            if (!isStopwatchRunning) {
+                stopwatchStartTime = Date.now() - stopwatchElapsed;
+                stopwatchInterval = setInterval(tickStopwatch, 100);
+                isStopwatchRunning = true; btn.textContent = 'ストップ'; btn.className = 'btn btn-lg btn-danger';
+            } else {
+                clearInterval(stopwatchInterval); isStopwatchRunning = false;
+                btn.textContent = 'スタート'; btn.className = 'btn btn-lg btn-primary';
+            }
+        }
+        function tickStopwatch() {
+            stopwatchElapsed = Date.now() - stopwatchStartTime;
+            const t = stopwatchElapsed / 1000;
+            document.getElementById('stopwatch-display').textContent = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}.${Math.floor((stopwatchElapsed % 1000) / 100)}`;
+        }
+        function resetStopwatch() {
+            clearInterval(stopwatchInterval); isStopwatchRunning = false; stopwatchElapsed = 0;
+            document.getElementById('stopwatch-display').textContent = '00:00.0';
+            document.getElementById('btn-sw-start').textContent = 'スタート';
+            document.getElementById('btn-sw-start').className = 'btn btn-lg btn-primary';
+        }
+        function stopStopwatch() { clearInterval(stopwatchInterval); isStopwatchRunning = false; }
+
+        function playSystemSound(type) {
+            if (!config.soundEnabled) return;
+            if (customAudios[type]) {
+                try {
+                    const audio = new Audio(customAudios[type]);
+                    audio.play(); return;
+                } catch(e) { console.error(e); }
+            }
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                const playTone = (freq, duration, startTime) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, startTime);
+                    gain.gain.setValueAtTime(0.1, startTime); gain.gain.exponentialRampToValueAtTime(0.00001, startTime + duration);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(startTime); osc.stop(startTime + duration);
+                };
+                const now = ctx.currentTime;
+                if (type === 'start') { playTone(880, 0.1, now); playTone(880, 0.1, now + 0.15); }
+                else if (type === 'warn') { playTone(660, 0.4, now); }
+                else if (type === 'danger') { playTone(554, 0.15, now); playTone(554, 0.15, now + 0.2); playTone(554, 0.15, now + 0.4); }
+                else if (type === 'end') { playTone(392, 0.3, now); playTone(523, 0.3, now + 0.3); playTone(587, 0.3, now + 0.6); playTone(659, 0.5, now + 0.9); }
+            } catch (e) { console.error(e); }
+        }
+
+        function openModal(id, type) {
+            currentTargetRowId = id; currentTargetType = type;
+            if (type === 'timetable') {
+                const row = timetableData.find(r => r.id === id);
+                modalTemporaryValue = row ? row.duration : 0;
+                document.getElementById('modal-title').textContent = `${row ? row.name : 'コマ'} の時間`;
+            } else {
+                modalTemporaryValue = modalTemporaryValue || 0;
+                document.getElementById('modal-title').textContent = 'タイマー時間設定';
+            }
+            updateModalDisplay();
+            document.getElementById('time-modal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('time-modal').style.display = 'none'; }
+        function addModalTime(mins) { modalTemporaryValue += mins; if(modalTemporaryValue > 240) modalTemporaryValue = 240; updateModalDisplay(); }
+        function clearModalTime() { modalTemporaryValue = 0; updateModalDisplay(); }
+        function updateModalDisplay() { 
+            if (currentTargetType === 'simple') {
+                const h = Math.floor(modalTemporaryValue / 60); const m = modalTemporaryValue % 60;
+                document.getElementById('modal-value-display').textContent = `${h}:${String(m).padStart(2, '0')}`;
+            } else {
+                document.getElementById('modal-value-display').textContent = `${modalTemporaryValue} 分`;
+            }
+        }
+        function commitModalTime() {
+            if (currentTargetType === 'timetable') {
+                const row = timetableData.find(r => r.id === currentTargetRowId);
+                if (row) { row.duration = modalTemporaryValue; document.getElementById(`v-time-${row.id}`).textContent = `${modalTemporaryValue} 分`; }
+            } else if (currentTargetType === 'simple') {
+                startSimpleTimer(modalTemporaryValue);
+            }
+            closeModal();
+        }
+        function openSimpleTimer() { openModal(0, 'simple'); }
+    </script>
+</body>
+</html>
