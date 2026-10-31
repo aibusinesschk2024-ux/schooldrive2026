@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>じりつかつどう クイズ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 全体のフォントを丸みのある親しみやすいものに */
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+      touch-action: manipulation; /* タッチのズレやダブルタップズームを防止 */
+      user-select: none; /* テキスト選択を無効化 */
+      -webkit-user-select: none;
+    }
+    
+    /* 〇のふわふわアニメーション */
+    @keyframes big-bounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.05); }
+    }
+    .animate-maru {
+      animation: big-bounce 1.5s infinite ease-in-out;
+    }
+
+    /* 優しいフェードイン */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-blue-50 min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
+
+  <!-- クイズ画面 -->
+  <div id="quiz-screen" class="w-full max-w-4xl w-full flex flex-col items-center fade-in">
+    <!-- しんこうじょうきょう -->
+    <div class="w-full flex justify-between items-center mb-6 px-4">
+      <span class="text-2xl sm:text-3xl font-bold text-blue-400">もんだい</span>
+      <span id="progress-text" class="text-2xl sm:text-3xl font-bold text-blue-400 bg-white px-6 py-2 rounded-full shadow-sm border-2 border-blue-100">
+        1 / 30
+      </span>
+    </div>
+
+    <!-- もんだいエリア -->
+    <div class="bg-white rounded-3xl shadow-lg p-8 sm:p-12 w-full text-center border-4 border-blue-100 mb-8">
+      <div id="emoji-display" class="text-7xl sm:text-9xl mb-6"></div>
+      <h1 id="question-text" class="text-3xl sm:text-5xl font-bold text-gray-700 leading-tight">
+        <!-- もんだいがここにはいります -->
+      </h1>
+    </div>
+
+    <!-- せんたくしエリア -->
+    <div id="options-container" class="w-full flex flex-col gap-6">
+      <!-- ボタンがここにはいります -->
+    </div>
+  </div>
+
+  <!-- クリア画面 (さいしょは かくしておく) -->
+  <div id="result-screen" class="w-full max-w-4xl text-center hidden fade-in">
+    <div class="bg-white rounded-3xl shadow-xl p-12 sm:p-20 border-4 border-yellow-200 flex flex-col items-center">
+      <div class="text-8xl sm:text-9xl mb-10">🎉</div>
+      <h1 class="text-4xl sm:text-6xl font-bold text-orange-500 mb-16 tracking-wider leading-tight">
+        ぜんぶ できたね！<br>おめでとう！
+      </h1>
+      <button onclick="restartQuiz()" class="bg-orange-400 text-white text-3xl sm:text-4xl font-bold py-8 px-16 rounded-full shadow-lg active:scale-95 transition-transform w-full sm:w-auto border-b-8 border-orange-500 active:border-b-0 active:mt-8">
+        もういちど やる
+      </button>
+    </div>
+  </div>
+
+  <!-- せいかいの オーバーレイ (〇) -->
+  <div id="correct-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm hidden">
+    <div class="text-red-500 text-[15rem] sm:text-[25rem] font-bold animate-maru drop-shadow-2xl">
+      〇
+    </div>
+  </div>
+
+  <!-- ふせいかいの オーバーレイ (やさしいメッセージ) -->
+  <div id="incorrect-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-sm hidden">
+    <div class="bg-white border-4 border-pink-300 rounded-full py-8 px-12 sm:px-20 shadow-2xl flex flex-col sm:flex-row items-center gap-6 animate-pulse">
+      <span class="text-6xl">👀</span>
+      <span class="text-3xl sm:text-5xl font-bold text-pink-500 text-center">
+        もういちど<br class="sm:hidden"> かんがえてみよう
+      </span>
+    </div>
+  </div>
+
+  <script>
+    // 30問のクイズデータ (すべてひらがな・ご指定の30問)
+    const quizData = [
+      { emoji: "😢", q: "おともだちに たたかれたら？", correct: "やめて っていう", wrong: "たたきかえす" },
+      { emoji: "🆘", q: "たたかれて こまったら？", correct: "せんせい たすけて っていう", wrong: "だまって がまんする" },
+      { emoji: "💢", q: "プンプン おこっている ひとが いたら？", correct: "ちかづかない", wrong: "そばに いく" },
+      { emoji: "😡", q: "この かおは どんな きもち？", correct: "おこっている", wrong: "うれしい" },
+      { emoji: "😭", q: "この かおは どんな きもち？", correct: "かなしい", wrong: "たのしい" },
+      { emoji: "😊", q: "この かおは どんな きもち？", correct: "うれしい", wrong: "かなしい" },
+      { emoji: "🙅", q: "いやな ことを されたら？", correct: "いやだ っていう", wrong: "なにも いわない" },
+      { emoji: "🧸", q: "じぶんの おもちゃを とられたら？", correct: "かして っていう", wrong: "たたく" },
+      { emoji: "❓", q: "わからない ことが あったら？", correct: "せんせい おしえて っていう", wrong: "そのままに する" },
+      { emoji: "🚽", q: "トイレに いきたい ときは？", correct: "トイレに いきたい っていう", wrong: "がまん する" },
+      { emoji: "😨", q: "この かおは どんな きもち？", correct: "びっくり している", wrong: "ねむい" },
+      { emoji: "😷", q: "この かおは どんな きもち？", correct: "くるしい・いたい", wrong: "げんき" },
+      { emoji: "😴", q: "この かおは どんな きもち？", correct: "ねむい", wrong: "おこっている" },
+      { emoji: "🗣️", q: "おおごえを だしている ひとが いたら？", correct: "ちかづかない", wrong: "いっしょに おおごえを だす" },
+      { emoji: "💥", q: "どん！と ぶつかられたら？", correct: "せんせいに いう", wrong: "ぶつかりかえす" },
+      { emoji: "💦", q: "じぶんが ぶつかって しまったら？", correct: "ごめんなさい っていう", wrong: "にげる" },
+      { emoji: "🤝", q: "おともだちと あそびたい ときは？", correct: "いれて っていう", wrong: "かってに はいる" },
+      { emoji: "🎁", q: "ほしい ものが ある ときは？", correct: "かして っていう", wrong: "かってに もっていく" },
+      { emoji: "😫", q: "この かおは どんな きもち？", correct: "つかれた", wrong: "うれしい" },
+      { emoji: "🤔", q: "この かおは どんな きもち？", correct: "かんがえている", wrong: "ないている" },
+      { emoji: "💧", q: "おともだちが ないていたら？", correct: "せんせいを よぶ", wrong: "じぶんも なく" },
+      { emoji: "🚶", q: "はしっては だめな ところでは？", correct: "ゆっくり あるく", wrong: "はしる" },
+      { emoji: "🪑", q: "じゅぎょうちゅうは どうする？", correct: "イスに すわる", wrong: "ずっと たちあるく" },
+      { emoji: "💓", q: "むねが どきどき して きたら？", correct: "しんこきゅう する", wrong: "あばれる" },
+      { emoji: "🤕", q: "おなかが いたく なったら？", correct: "せんせいに いう", wrong: "だまって いる" },
+      { emoji: "😤", q: "この かおは どんな きもち？", correct: "プンプン している", wrong: "わらっている" },
+      { emoji: "🩹", q: "けがを して しまったら？", correct: "せんせいに いう", wrong: "かくす" },
+      { emoji: "🧘", q: "おちつかない ときは どうする？", correct: "ゆっくり かずを かぞえる", wrong: "おおごえを だす" },
+      { emoji: "🧤", q: "おちている ものを みつけたら？", correct: "せんせいに わたす", wrong: "じぶんの ものに する" },
+      { emoji: "✨", q: "ぜんぶ おわったら？", correct: "できた！ っていう", wrong: "なにも いわない" }
+    ];
+
+    let currentIndex = 0;
+    let isAnimating = false; // ボタンのれんだ（連続タップ）をふせぐ
+
+    // はいれつを シャッフルする プログラム
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // がめんを こうしんする
+    function renderQuestion() {
+      if (currentIndex >= quizData.length) {
+        showResultScreen();
+        return;
+      }
+
+      const qData = quizData[currentIndex];
+      
+      // テキストとえもじのセット
+      document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${quizData.length}`;
+      document.getElementById('emoji-display').innerText = qData.emoji;
+      document.getElementById('question-text').innerText = qData.q;
+
+      // せんたくしをつくって シャッフルする
+      let options = [
+        { text: qData.correct, isCorrect: true },
+        { text: qData.wrong, isCorrect: false }
+      ];
+      options = shuffleArray(options);
+
+      // ボタンを HTML に ついかする
+      const container = document.getElementById('options-container');
+      container.innerHTML = ''; // １回からっぽにする
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        // iPadでもおしやすいように、おおきくて パステルカラーのボタン
+        btn.className = "bg-white border-4 border-green-200 text-gray-700 text-3xl sm:text-4xl font-bold py-8 px-8 rounded-3xl shadow-lg active:bg-green-50 active:scale-95 transition-all duration-200 ease-in-out text-left border-b-8 active:border-b-4 active:translate-y-1 w-full";
+        btn.innerText = opt.text;
+        
+        btn.onclick = () => handleAnswer(opt.isCorrect);
+        
+        container.appendChild(btn);
+      });
+    }
+
+    // ボタンをおしたときの しょり
+    function handleAnswer(isCorrect) {
+      if (isAnimating) return; // アニメーションちゅうは おせないようにする
+      isAnimating = true;
+
+      if (isCorrect) {
+        // せいかい！
+        const overlay = document.getElementById('correct-overlay');
+        overlay.classList.remove('hidden');
+        
+        // 1.5びょう まってから つぎのもんだいへ
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          currentIndex++;
+          renderQuestion();
+          isAnimating = false;
+        }, 1500);
+      } else {
+        // ふせいかい（やさしく もういちど）
+        const overlay = document.getElementById('incorrect-overlay');
+        overlay.classList.remove('hidden');
+        
+        // 2びょう まってから もとのがめんへ
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          isAnimating = false;
+        }, 2000);
+      }
+    }
+
+    // ぜんぶ おわったときの がめん
+    function showResultScreen() {
+      document.getElementById('quiz-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.remove('hidden');
+    }
+
+    // もういちど やる
+    function restartQuiz() {
+      currentIndex = 0;
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('quiz-screen').classList.remove('hidden');
+      renderQuestion();
+    }
+
+    // さいしょに がめんをひらいたときに もんだいをよみこむ
+    window.onload = renderQuestion;
+  </script>
+</body>
+</html>
