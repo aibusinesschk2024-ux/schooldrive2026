@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サクッと席替えくん v1.23</title>
+    <!-- スクショ生成・Excel読み込み・PDF生成用の外部ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Hiragino Maru Gothic ProN', 'Meiryo', sans-serif;
+            background-color: #f5f6fa;
+            color: #2f3640;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- メインコンテンツ（3分割） --- */
+        .main-content { display: flex; flex: 1; overflow: hidden; }
+
+        /* === 左側：コントロールエリア === */
+        .left-pane {
+            width: 320px; min-width: 280px; display: flex; flex-direction: column; align-items: center;
+            background-color: #2f3640; color: white; padding: 20px 10px; border-right: 2px solid #dcdde1;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 10; overflow-y: auto;
+        }
+
+        h1 { 
+            width: 100%; margin-top: 0; font-size: 20px; text-shadow: 0 0 10px rgba(255,255,255,0.3); 
+            text-align: center; border-bottom: 1px solid #555; padding-bottom: 10px;
+            display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px;
+        }
+        .version-badge {
+            font-size: 12px; background-color: #e67e22; color: white; 
+            padding: 2px 8px; border-radius: 10px; font-weight: bold; letter-spacing: 1px;
+        }
+
+        /* ルーレット盤面 */
+        .roulette-container { position: relative; margin: 10px 0 20px 0; }
+        canvas { border-radius: 50%; box-shadow: 0 0 15px rgba(0,0,0,0.5); background-color: #fff;}
+        .pointer {
+            position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; border-left: 12px solid transparent;
+            border-right: 12px solid transparent; border-top: 25px solid #ff4757; z-index: 10;
+        }
+
+        /* メイン操作ボタン */
+        .btn-main {
+            width: 90%; padding: 14px; font-size: 15px; font-weight: bold; border: none; border-radius: 30px;
+            cursor: pointer; transition: all 0.2s; text-align: center; margin-bottom: 10px;
+        }
+        .btn-main:active:not(:disabled) { transform: translateY(3px); }
+        .btn-main:disabled { background-color: #747d8c !important; box-shadow: none !important; cursor: not-allowed; opacity: 0.5; }
+
+        /* 動的生成されるボタングループ */
+        #dynamicControls {
+            width: 90%; display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;
+        }
+        .category-group {
+            background-color: #353b48; padding: 10px; border-radius: 6px; border-left: 4px solid #3498db;
+        }
+        .category-title { font-size: 12px; color: #a4b0be; margin-bottom: 8px; font-weight: bold; }
+        .category-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+        
+        .cat-btn {
+            padding: 6px 10px; font-size: 13px; background-color: #3498db; color: white;
+            border: none; border-radius: 4px; cursor: pointer; font-weight: bold;
+            flex: 1; min-width: 45%; text-align: center;
+        }
+        .cat-btn:hover:not(:disabled) { background-color: #2980b9; }
+        .cat-btn:active:not(:disabled) { transform: translateY(1px); }
+        .cat-btn:disabled { background-color: #747d8c; cursor: not-allowed; opacity: 0.5; }
+
+        .status-text { 
+            width: 85%; font-size: 12px; color: #ced6e0; text-align: left; line-height: 1.6; 
+            margin-bottom: 15px; background-color: #353b48; padding: 15px; border-radius: 8px;
+        }
+
+        /* エクスポート */
+        .export-area { width: 90%; display: none; flex-direction: column; gap: 10px; margin-top: auto; padding-top: 20px;}
+        .export-area button {
+            padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white;
+            transition: transform 0.1s;
+        }
+        .export-area button:active { transform: translateY(2px); }
+        #resetBtn { background-color: #34495e; box-shadow: 0 4px 0 #2c3e50; margin-bottom: 10px; }
+        #csvBtn { background-color: #27ae60; box-shadow: 0 4px 0 #1e8449; }
+        #imageBtn { background-color: #8e44ad; box-shadow: 0 4px 0 #732d91; }
+        #pdfBtn { background-color: #e74c3c; box-shadow: 0 4px 0 #c0392b; }
+
+        /* === 画像内の凡例表示用スタイル === */
+        .legend-area {
+            width: 100%; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;
+            padding: 8px 12px; background-color: #f8f9fa; border: 1px solid #e1e1e1; border-radius: 4px;
+            font-size: 11px; font-weight: bold; box-sizing: border-box; justify-content: center;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-color { width: 14px; height: 14px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1); }
+
+        /* === 中央：座席表エリア === */
+        .center-pane {
+            flex: 1; padding: 20px; display: flex; flex-direction: column;
+            align-items: center; overflow: hidden; justify-content: center;
+            background-color: #f5f6fa; background-image: linear-gradient(#e1e1e1 1px, transparent 1px), linear-gradient(90deg, #e1e1e1 1px, transparent 1px); background-size: 20px 20px;
+        }
+
+        #captureArea {
+            background-color: white; padding: 30px 40px; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center;
+            border: 1px solid #ccc; position: relative;
+            transform-origin: center center;
+        }
+
+        /* プリント用タイトル（左上） */
+        .print-title {
+            width: 100%; font-size: 24px; font-weight: bold; color: #2f3640;
+            border-bottom: 2px solid #2f3640; padding-bottom: 5px; margin-bottom: 20px; text-align: left;
+        }
+
+        .classroom { display: flex; gap: 15px; justify-content: center; }
+        .desk-column { display: flex; flex-direction: column-reverse; gap: 15px; }
+
+        /* 📛 名札風の座席デザイン */
+        .desk {
+            width: 140px; height: 78px; background-color: #ffffff; color: #000;
+            border: 2px solid #2f3640; border-radius: 4px; display: flex; flex-direction: column;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s ease;
+            position: relative; overflow: hidden;
+        }
+        .desk:hover { transform: translateY(-2px); box-shadow: 3px 5px 10px rgba(0,0,0,0.15); }
+        
+        .desk-top { display: flex; justify-content: space-between; padding: 2px 5px; border-bottom: 1px dotted #ccc; font-size: 11px; }
+        .d-num { font-weight: bold; color: #2980b9;}
+        .desk-middle { font-size: 9px; text-align: center; color: #555; margin-top: 2px; letter-spacing: 0.5px;}
+        
+        .desk-tags {
+            font-size: 8px; font-weight: bold; text-align: center; color: #7f8fa6;
+            background-color: #f8f9fa; margin: 1px 4px; padding: 1px 0; border-radius: 2px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        .desk-bottom { 
+            font-weight: bold; text-align: center; flex-grow: 1; 
+            display: flex; align-items: center; justify-content: center; letter-spacing: 1px;
+            white-space: nowrap; overflow: hidden; padding: 0 4px 2px 4px; box-sizing: border-box;
+        }
+
+        /* 重ね掛けカラーバー用のコンテナ */
+        .desk-colorbar {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 5px;
+            display: flex; flex-direction: row;
+        }
+        .colorbar-segment {
+            flex: 1; height: 100%;
+        }
+
+        .desk-empty { font-size: 28px; color: #dcdde1; display: flex; align-items: center; justify-content: center; height: 100%; font-weight: bold;}
+
+        /* 状態クラス */
+        .desk.fixed { border-color: #f39c12; background-color: #fff9e6; } 
+        .desk.filled { border-color: #2f3640; } 
+        .desk.target { 
+            border-color: #e74c3c; background-color: #ffeaea;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5); transform: scale(1.05);
+        }
+
+        .blackboard {
+            width: 300px; height: 35px; background-color: #fff; border: 2px solid #2f3640;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 16px; margin-top: 30px; color: #000;
+        }
+        .instruction { margin-bottom: 10px; color: #e1b12c; font-weight: bold; text-align: center; font-size: 14px;}
+
+        /* === 右側：データ入力エリア === */
+        .right-pane {
+            width: 260px; min-width: 230px; background-color: #ffffff; padding: 20px;
+            border-left: 2px solid #dcdde1; display: flex; flex-direction: column;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.05); z-index: 10;
+        }
+
+        .right-pane h2 { font-size: 15px; margin-top: 0; color: #2f3640; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-bottom: 15px;}
+        
+        .class-name-input-group { margin-bottom: 12px; }
+        .class-name-input-group label { font-size: 12px; font-weight: bold; color: #3498db; display: block; margin-bottom: 4px;}
+        .class-name-input-group input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box;}
+
+        .data-info { font-size: 11px; color: #7f8fa6; margin-bottom: 10px; line-height: 1.4; }
+        textarea {
+            flex: 1; width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 10px;
+            font-size: 11px; font-family: monospace; resize: none; white-space: pre; overflow: auto; box-sizing: border-box;
+            background-color: #fdfdfd;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        #loadDataBtn {
+            margin-top: 10px; padding: 10px; background-color: #3498db; color: white;
+            border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;
+        }
+        #loadDataBtn:hover { background-color: #2980b9; }
+        .loaded-status { margin-top: 10px; font-size: 12px; font-weight: bold; color: #27ae60; text-align: center; display: none;}
+
+        /* === モーダル共通スタイル === */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 8px; width: 80%; max-width: 700px;
+            max-height: 85vh; overflow-y: auto; color: #2f3640; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .modal-content h2 { margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        .close-modal-btn {
+            display: block; width: 100%; padding: 12px; margin-top: 30px;
+            background-color: #7f8fa6; color: white; border: none; border-radius: 4px;
+            cursor: pointer; font-weight: bold; text-align: center; font-size: 16px;
+        }
+        .close-modal-btn:hover { background-color: #718093; }
+
+        /* ヘルプ・履歴モーダル専用 */
+        .info-modal h3 { color: #2980b9; margin-top: 25px; border-left: 4px solid #3498db; padding-left: 10px; font-size: 16px;}
+        .info-modal p, .info-modal li { font-size: 14px; line-height: 1.6; color: #333; }
+        .info-modal ol { padding-left: 20px; }
+
+        /* 履歴リスト専用 */
+        .history-list { list-style: none; padding: 0; }
+        .history-list li { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .history-list li:last-child { border-bottom: none; }
+        .history-ver { font-weight: bold; color: #2ed573; font-size: 16px; margin-right: 10px;}
+        .history-date { font-size: 12px; color: #7f8fa6; }
+        .history-desc { margin-top: 5px; font-size: 14px; line-height: 1.5; color: #2f3640;}
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <!-- === 左側：操作パネル === -->
+        <div class="left-pane">
+            <h1>サクッと席替えくん <span class="version-badge">v1.23</span></h1>
+
+            <!-- ルーレット盤面 -->
+            <div class="roulette-container">
+                <div class="pointer"></div>
+                <canvas id="rouletteCanvas" width="220" height="220"></canvas>
+            </div>
+            
+            <!-- 操作手順テキスト -->
+            <div id="statusText" class="status-text">
+                ①右の枠に名簿データをコピペ（またはドロップ）する。<br>
+                ②「データを反映する」を押す。<br>
+                ③確認画面で「座席数」と「クラス名」を入力し、決定を押す。
+            </div>
+
+            <!-- アクションボタン群を囲むコンテナ -->
+            <div id="actionButtonsContainer" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+                <!-- 操作ボタン群 -->
+                <button id="mainActionBtn" class="btn-main" style="background-color: #2ed573; color: white; box-shadow: 0 5px 0 #219d53;" disabled>▶ 自動席替えスタート</button>
+                <button id="stopBtn" class="btn-main" style="background-color: #ff4757; color: white; box-shadow: 0 5px 0 #c0392b; display: none;">⏹ ストップ</button>
+                <button id="autoDrawBtn" class="btn-main" style="background-color: #1e90ff; color: white; box-shadow: 0 5px 0 #0984e3; display: none;">⚡ 自動連続抽選</button>
+                <button id="skipBtn" class="btn-main" style="background-color: #e67e22; color: white; box-shadow: 0 5px 0 #d35400; display: none;">⏩ 演出スキップ</button>
+                
+                <!-- 出席番号順ボタン -->
+                <button id="numberOrderBtn" class="btn-main" style="background-color: #9b59b6; color: white; box-shadow: 0 5px 0 #8e44ad;" disabled>⬇️ 出席番号順に配置</button>
+
+                <!-- 動的カテゴリボタングループ -->
+                <div id="dynamicControls"></div>
+            </div>
+
+            <div id="exportArea" class="export-area">
+                <button id="resetBtn">🔄 席替えをリセット</button>
+                <hr style="width: 100%; border: 0; border-top: 1px dashed #555; margin: 5px 0;">
+                <button id="csvBtn">📥 エクセル用 (CSV) 保存</button>
+                <button id="imageBtn">📷 画像 (PNG) で保存</button>
+                <button id="pdfBtn">📄 座席表をPDFで保存</button>
+            </div>
+        </div>
+
+        <!-- === 中央：座席表 === -->
+        <div class="center-pane">
+            <div class="instruction" id="instruction"></div>
+            <div id="captureArea">
+                <!-- クラス名プリント用タイトル -->
+                <div id="printTitle" class="print-title"></div>
+                
+                <div class="classroom" id="classroom"></div>
+                <div class="blackboard">教　壇</div>
+
+                <!-- 画像・PDF保存時にも一緒に写り込む自動レジェンド凡例 (非表示設定済) -->
+                <div id="legendArea" class="legend-area" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- === 右側：データ入力 === -->
+        <div class="right-pane">
+            <!-- ヘルプ・履歴ボタン -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="helpBtn" style="flex:1; background-color:#3498db; color:white; border:none; padding:8px; border-radius:4px; cursor:pointer; font-weight:bold; transition:transform 0.1s;" onmousedown="this.style.transform='translateY(2px)'" onmouseup="this.style.transform='none'">❓ 使い方</button>
+                <button id="historyBtn" style="flex:1; background-color:#16a085; color:white; border:none; padding:8px; border-radius:4px; cursor:pointer; font-weight:bold; transition:transform 0.1s;" onmousedown="this.style.transform='translateY(2px)'" onmouseup="this.style.transform='none'">📝 更新履歴</button>
+            </div>
+
+            <h2>📝 基本情報の登録</h2>
+
+            <!-- 内部のロジックを壊さないよう、入力欄は残して非表示化 -->
+            <div class="class-name-input-group" style="display: none;">
+                <label for="layoutInput">⚙️ 列ごとの座席数（左列から）</label>
+                <input type="text" id="layoutInput" value="5,6,6,6,7,7">
+            </div>
+            <div class="class-name-input-group" style="display: none;">
+                <label for="classNameInput">🏷️ クラス名</label>
+                <input type="text" id="classNameInput" value="〇〇コース〇年">
+            </div>
+
+            <div class="data-info" style="margin-top: 5px;">
+                1行目は見出し項目にしてください。5列目以降が「カテゴリ」として左側に自動登録されます。
+            </div>
+            <!-- サンプルプレースホルダー -->
+            <textarea id="excelInput" wrap="off" placeholder="【Excelの表をここにコピー＆ペースト、またはファイルを直接ドロップしてください】
+
+（対応ファイル例：席替えくん用名簿データ.xlsx）
+番号	名前	ふりがな	中学校	文理	地歴	部活
+1	青木 さくら	あおき さくら	第一中央	文系	日本史	美術部
+2	伊藤 健太	いとう ケンた	第二みどり	理系	地理	野球部
+3	上田 結衣	うえだ ゆい	さくら台	文系	地理	吹奏楽部
+4	遠藤 翔太	えんどう しょうた	第一中央	文系	日本史	サッカー部
+5	小川 葵	おがわ あおい	第二みどり	理系	地理	テニス部"></textarea>
+            <button id="loadDataBtn">データを反映する</button>
+            <div id="loadedStatus" class="loaded-status">✅ データを反映しました</div>
+        </div>
+    </div>
+
+    <!-- === データ確認モーダル === -->
+    <div id="dataConfirmModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2>📊 座席数とクラス名の入力</h2>
+            
+            <div style="margin-bottom: 20px; background-color: #f1f2f6; padding: 15px; border-radius: 8px; text-align: center;">
+                <p style="margin: 0; font-size: 14px; color: #2f3640; font-weight: bold;">読み込んだ人数</p>
+                <p style="margin: 5px 0 0 0; font-size: 32px; color: #2980b9; font-weight: bold;"><span id="modalStudentCount">0</span> <span style="font-size: 16px;">人</span></p>
+            </div>
+
+            <div class="class-name-input-group" style="margin-bottom: 20px;">
+                <label for="modalLayoutInput" style="font-size: 14px; font-weight: bold;">⚙️ 列ごとの座席数 <span style="color:#7f8fa6; font-weight:normal; font-size:12px;">（左列からカンマ区切り / 必要に応じて編集できます）</span></label>
+                <input type="text" id="modalLayoutInput" value="" style="font-size: 18px; padding: 10px;" placeholder="例: 5,6,6,6,7,7">
+                <p id="modalLayoutWarning" style="color:#e74c3c; font-size:13px; font-weight:bold; margin-top:8px; display:none;">⚠️ 座席数の合計（<span id="modalSeatCount">0</span>席）が人数と一致しません。</p>
+            </div>
+
+            <div class="class-name-input-group" style="margin-bottom: 30px;">
+                <label for="modalClassNameInput" style="font-size: 14px; font-weight: bold;">🏷️ クラス名 <span style="color:#7f8fa6; font-weight:normal; font-size:12px;">（変更できます）</span></label>
+                <input type="text" id="modalClassNameInput" value="" style="font-size: 18px; padding: 10px;" placeholder="例：〇〇コース〇年【文系・物理・生物】">
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <button id="confirmDataBtn" class="btn-main" style="background-color: #2ed573; color: white; box-shadow: 0 4px 0 #219d53; margin:0; flex: 2;">決定して配置準備へ</button>
+                <button id="cancelDataBtn" class="close-modal-btn" style="margin:0; flex: 1; padding: 14px;">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === ヘルプモーダル === -->
+    <div id="helpModal" class="modal-overlay">
+        <div class="modal-content info-modal">
+            <h2>📖 サクッと席替えくんの使い方</h2>
+            
+            <h3>1. 準備する</h3>
+            <ol>
+                <li>右側の入力枠に「席替えくん用名簿データ.xlsx」をコピーして貼り付けるか、ファイルをそのまま枠の中にドラッグ＆ドロップします。<br><em>※列の順番は必ず「番号・名前・ふりがな・中学校」の後に任意のカテゴリ（文理・地歴など）としてください。</em></li>
+                <li>「データを反映する」を押します。</li>
+                <li>確認画面が出ますので、ここで**「列ごとの座席数」と「クラス名」**を確認・入力し、人数と座席数が一致したら「決定」を押します。<br><em>※座席数は読み込んだ人数に合わせて、自動で6列に均等割りした数字が入力されます。必要に応じて微調整してください。</em><br><em>※印刷用タイトルにカテゴリ名を含めたい場合は、クラス名の後ろに「【文系・物理・生物】」のように手動入力しておくと便利です。</em></li>
+                <li>視力などの理由で**席を固定したい生徒**がいる場合は、中央の空席をクリックして出席番号を入力します。</li>
+            </ol>
+
+            <h3>2. 席替えを開始する（3つの方法）</h3>
+            <p>左側の操作パネルから、用途に合わせた配置方法を選びます。</p>
+            <ul>
+                <li><strong>▶ 自動席替えスタート：</strong><br>全員を完全ランダムで配置します。ルーレットが回り始めるので「⏹ ストップ」を押して自分のタイミングで止めてください。決定後、自動で次のルーレットが始まります。（全自動の連続抽選・スキップも可能です）</li>
+                <li><strong>⬇️ 出席番号順に配置：</strong><br>残りの生徒を出席番号の若い順に、左下（教壇側）から一瞬で配置します。タイトルに【出席番号順】と自動付与されます。</li>
+                <li><strong>【カテゴリ名】を配置：</strong><br>Excelデータから自動認識された属性（文系理系や理科・課題研究などの選択教科）の生徒だけを抽出し、出席番号順に一瞬で配置します。<strong>別のカテゴリボタンを続けて押すことで、重ね掛けでの配置が可能で、座席にグループ色とラベルが、そしてタイトル横に【選んだカテゴリ】が自動追記されていきます。</strong></li>
+            </ul>
+
+            <h3>3. その他の便利な機能</h3>
+            <ul>
+                <li><strong>⏩ 演出スキップ：</strong><br>アニメーションが長く感じる場合、実行中に現れるスキップボタンを押すと、残りの配置が一瞬で完了します。</li>
+                <li><strong>🔄 リセット機能：</strong><br>完了後や途中でやり直したい場合、出力ボタンの上の「席替えをリセット」を押すと配置前の状態に戻せます。タイトル横の履歴もクリアされます。</li>
+                <li><strong>📥 出力機能 (CSV/画像/PDF)：</strong><br>配置完了後、Excelに貼り付けられるCSV形式や、そのまま印刷できる画像(PNG)・PDF(A4横)形式で座席表を保存・共有できます。</li>
+            </ul>
+
+            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 20px 0;">
+            <p style="font-size: 13px; color: #2c3e50; background-color: #ecf0f1; padding: 12px; border-radius: 6px; font-weight: bold; line-height: 1.5;">
+                📢 不具合の報告や「こんな機能を追加してほしい！」などのご要望がございましたら、お気軽に大坪までご連絡ください。
+            </p>
+
+            <button class="close-modal-btn" id="closeHelpBtn">閉じる</button>
+        </div>
+    </div>
+
+    <!-- === 更新履歴モーダル === -->
+    <div id="historyModal" class="modal-overlay">
+        <div class="modal-content info-modal">
+            <h2>📝 更新履歴</h2>
+            <ul class="history-list">
+                <li>
+                    <span class="history-ver">v1.23</span><span class="history-date">2026/06/18</span>
+                    <div class="history-desc">
+                        ・【仕様変更】データ反映時の自動座席レイアウト計算にて、端数が出た場合に「右側の列」から優先して人数を割り当てるようにロジックを変更しました。
+                    </div>
+                </li>
+                <li>
+                    <span class="history-ver">v1.22</span><span class="history-date">2026/06/18</span>
+                    <div class="history-desc">
+                        ・【UI改善】データ反映時に、読み込んだ人数に合わせて自動で「6列の均等な座席レイアウト（中央列優先）」が初期入力されるように改善し、設定の手間を省きました。<br>
+                        ・【UI改善】クラス名の初期値を「〇〇コース〇年」に変更し、ラベルの文言をより分かりやすく調整しました。
+                    </div>
+                </li>
+                <li>
+                    <span class="history-ver">v1.21</span><span class="history-date">2026/06/18</span>
+                    <div class="history-desc">
+                        ・【UI改善】座席表下部の色別名称表示（凡例エリア）が、名札内テキストと重複して情報過多になっていたため、表示領域を削除しデザインをスマート化しました。
+                    </div>
+                </li>
+                <li>
+                    <span class="history-ver">v1.20</span><span class="history-date">2026/06/18</span>
+                    <div class="history-desc">
+                        <strong>🌟 【自動化機能拡張】タイトルのカテゴリ履歴自動追記システムを搭載</strong><br>
+                        ・カテゴリ配置ボタンを押した順番に沿って、印刷用タイトルのクラス名の後ろに `【文系・物理・生物】` のように自動で配置カテゴリ名が追記されていく連動システムを実装しました。
+                    </div>
+                </li>
+                <li>
+                    <span class="history-ver">v1.10</span><span class="history-date">2026/06/18</span>
+                    <div class="history-desc">
+                        ・【大型機能拡張】カテゴリ重ね掛け色分けビジュアル表示を実装。座席カード下部へのカラーバー付与および凡例ラベルテキストの自動表示に対応しました。
+                    </div>
+                </li>
+            </ul>
+            <button class="close-modal-btn" id="closeHistoryBtn">閉じる</button>
+        </div>
+    </div>
+
+    <!-- 文字幅計測用の一時キャンバス（非表示） -->
+    <canvas id="textMeasureCanvas" style="display:none;"></canvas>
+
+    <script>
+        // --- 変数 ---
+        let totalStudents = 0; let columnLayout = []; let remainingNumbers = []; let allDesks = []; let fillingOrderDesks = [];
+        let studentData = {}; let categoryHeaders = [];
+        
+        // 元々先生がモーダル画面で入力したベースとなる純粋なクラス名
+        let baseClassName = "";
+        // 選択されたカテゴリ名を格納するスタック
+        let selectedCategoryHistory = [];
+
+        // 座席ごとのカテゴリ履歴を記録
+        let deskCategoryMap = {};
+        let categoryColorMap = {};
+        const colorPalette = ["#ff4757", "#2ed573", "#1e90ff", "#ffa502", "#9b59b6", "#16a085", "#e84393", "#00cec9", "#ffeaa7", "#a4b0be", "#d63031", "#0984e3", "#6c5ce7", "#20bf6b", "#fa8231"];
+        let colorIndex = 0;
+
+        // データ確認モーダル用の一時変数
+        let tempStudentData = {}; let tempCategoryHeaders = []; let tempCategoryValues = {}; let tempStudentCount = 0;
+
+        // アニメーション制御用
+        let currentMode = ""; 
+        let sequenceTimeoutId = null;
+        let currentTargetIndex = -1;
+        let currentCategoryQueue = []; 
+        let isAutoContinuous = false; 
+
+        // ルーレット物理演算用
+        let currentAngle = 0; let spinVelocity = 0; let isSpinning = false; let isStopping = false; let animationId;
+
+        // --- DOM ---
+        const layoutInput = document.getElementById('layoutInput'); 
+        const classroom = document.getElementById('classroom'); const instruction = document.getElementById('instruction');
+        const statusText = document.getElementById('statusText'); const dynamicControls = document.getElementById('dynamicControls');
+        const exportArea = document.getElementById('exportArea');
+        const excelInput = document.getElementById('excelInput'); const loadDataBtn = document.getElementById('loadDataBtn');
+        const loadedStatus = document.getElementById('loadedStatus');
+        
+        const actionButtonsContainer = document.getElementById('actionButtonsContainer');
+        const mainActionBtn = document.getElementById('mainActionBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const autoDrawBtn = document.getElementById('autoDrawBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        const numberOrderBtn = document.getElementById('numberOrderBtn');
+        
+        const classNameInput = document.getElementById('classNameInput'); const printTitle = document.getElementById('printTitle');
+        const legendArea = document.getElementById('legendArea');
+        const helpBtn = document.getElementById('helpBtn'); const helpModal = document.getElementById('helpModal'); const closeHelpBtn = document.getElementById('closeHelpBtn');
+        const historyBtn = document.getElementById('historyBtn'); const historyModal = document.getElementById('historyModal'); const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // 確認モーダル用DOM
+        const dataConfirmModal = document.getElementById('dataConfirmModal');
+        const modalStudentCount = document.getElementById('modalStudentCount');
+        const modalLayoutInput = document.getElementById('modalLayoutInput');
+        const modalLayoutWarning = document.getElementById('modalLayoutWarning');
+        const modalSeatCount = document.getElementById('modalSeatCount');
+        const modalClassNameInput = document.getElementById('modalClassNameInput');
+        const confirmDataBtn = document.getElementById('confirmDataBtn');
+        const cancelDataBtn = document.getElementById('cancelDataBtn');
+
+        // キャンバス設定
+        const canvas = document.getElementById('rouletteCanvas'); const ctx = canvas.getContext('2d');
+        const centerX = canvas.width/2; const centerY = canvas.height/2; const radius = 95;
+        
+        // 文字幅計測用キャンバス
+        const measureCtx = document.getElementById('textMeasureCanvas').getContext('2d');
+
+        // --- ウィンドウリサイズ時の座席表自動縮小（自動フィット） ---
+        function resizeCaptureArea() {
+            const centerPane = document.querySelector('.center-pane');
+            const captureArea = document.getElementById('captureArea');
+            if (!centerPane || !captureArea) return;
+            
+            captureArea.style.transform = 'none'; 
+            
+            const paneWidth = centerPane.clientWidth - 40; 
+            const paneHeight = centerPane.clientHeight - 40;
+            
+            const captureWidth = captureArea.offsetWidth;
+            const captureHeight = captureArea.offsetHeight;
+            
+            if (captureWidth === 0 || captureHeight === 0) return;
+
+            const scaleX = paneWidth / captureWidth;
+            const scaleY = paneHeight / captureHeight;
+            
+            const scale = Math.min(scaleX, scaleY, 1); 
+            
+            captureArea.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', resizeCaptureArea);
+
+        // --- ドラッグ＆ドロップでExcelファイルを読み込む処理 ---
+        excelInput.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            excelInput.style.backgroundColor = '#e1f0fa';
+            excelInput.style.border = '2px dashed #3498db';
+        });
+
+        excelInput.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            excelInput.style.backgroundColor = '#fdfdfd';
+            excelInput.style.border = '1px solid #ccc';
+        });
+
+        excelInput.addEventListener('drop', (e) => {
+            e.preventDefault();
+            excelInput.style.backgroundColor = '#fdfdfd';
+            excelInput.style.border = '1px solid #ccc';
+
+            const files = e.dataTransfer.files;
+            if (files.length === 0) return;
+            const file = files[0];
+
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.csv')) {
+                alert('Excelファイル(.xlsx, .xls)またはCSVファイルをドロップしてください。');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const tsv = XLSX.utils.sheet_to_csv(workbook.Sheets[firstSheetName], {FS: "\t"});
+                    
+                    const cleanTsv = tsv.split('\n').filter(line => line.trim().replace(/\t/g, '') !== '').join('\n');
+
+                    excelInput.value = cleanTsv;
+                    loadDataBtn.click();
+                } catch (error) {
+                    alert('ファイルの読み込みに失敗しました。');
+                    console.error(error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // --- ヘルプ・履歴モーダル制御 ---
+        helpBtn.addEventListener('click', () => helpModal.classList.add('show'));
+        closeHelpBtn.addEventListener('click', () => helpModal.classList.remove('show'));
+        helpModal.addEventListener('click', (e) => { if(e.target === helpModal) helpModal.classList.remove('show'); });
+
+        historyBtn.addEventListener('click', () => historyModal.classList.add('show'));
+        closeHistoryBtn.addEventListener('click', () => historyModal.classList.remove('show'));
+        historyModal.addEventListener('click', (e) => { if(e.target === historyModal) historyModal.classList.remove('show'); });
+
+        // --- データ確認モーダル制御 ---
+        function checkLayoutMatch() {
+            const parsedLayout = modalLayoutInput.value.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0);
+            const totalSeats = parsedLayout.reduce((sum, num) => sum + num, 0);
+            modalSeatCount.innerText = totalSeats;
+            
+            if (totalSeats !== tempStudentCount) {
+                modalLayoutWarning.style.display = 'block';
+                confirmDataBtn.disabled = true;
+                confirmDataBtn.style.backgroundColor = '#747d8c';
+                confirmDataBtn.style.boxShadow = 'none';
+            } else {
+                modalLayoutWarning.style.display = 'none';
+                confirmDataBtn.disabled = false;
+                confirmDataBtn.style.backgroundColor = '#2ed573';
+                confirmDataBtn.style.boxShadow = '0 4px 0 #219d53';
+            }
+        }
+        modalLayoutInput.addEventListener('input', checkLayoutMatch);
+
+        cancelDataBtn.addEventListener('click', () => { dataConfirmModal.classList.remove('show'); });
+        dataConfirmModal.addEventListener('click', (e) => { if(e.target === dataConfirmModal) dataConfirmModal.classList.remove('show'); });
+
+        confirmDataBtn.addEventListener('click', () => {
+            layoutInput.value = modalLayoutInput.value;
+            
+            baseClassName = modalClassNameInput.value.trim();
+            classNameInput.value = baseClassName;
+            
+            studentData = tempStudentData;
+            categoryHeaders = tempCategoryHeaders;
+            
+            dataConfirmModal.classList.remove('show');
+            
+            loadedStatus.style.display = 'block';
+            setTimeout(() => { loadedStatus.style.display = 'none'; }, 2000);
+            
+            generateCategoryButtons(tempCategoryValues);
+            initClassroom();
+        });
+
+        // --- クラス名（タイトル）の組み立て更新処理 ---
+        function updatePrintTitle() {
+            if (selectedCategoryHistory.length > 0) {
+                const historyString = `【${selectedCategoryHistory.join("・")}】`;
+                printTitle.innerText = `${baseClassName}${historyString}`;
+            } else {
+                printTitle.innerText = baseClassName;
+            }
+            setTimeout(resizeCaptureArea, 0);
+        }
+
+        // --- 凡例（レジェンド）の描画更新処理（v1.21で非表示設定のまま念のため維持） ---
+        function updateLegendArea() {
+            // 現在は表示しない設定
+            legendArea.style.display = "none";
+        }
+
+        // --- ボタンの表示切り替えロジック ---
+        function setButtonState(state) {
+            if (state === "standby") {
+                actionButtonsContainer.style.display = "flex";
+                
+                mainActionBtn.style.display = "block";
+                mainActionBtn.disabled = (remainingNumbers.length === 0);
+                
+                stopBtn.style.display = "none";
+                autoDrawBtn.style.display = "none";
+                skipBtn.style.display = "none";
+                
+                numberOrderBtn.style.display = "block";
+                numberOrderBtn.disabled = (remainingNumbers.length === 0);
+                
+                toggleCategoryButtons(false);
+            } else if (state === "spinning") {
+                actionButtonsContainer.style.display = "flex";
+                mainActionBtn.style.display = "none";
+                
+                stopBtn.style.display = "block";
+                stopBtn.disabled = false;
+                autoDrawBtn.style.display = "block";
+                autoDrawBtn.disabled = false;
+                
+                skipBtn.style.display = "block";
+                numberOrderBtn.style.display = "none";
+                
+                toggleCategoryButtons(true);
+            } else if (state === "auto_spinning") {
+                actionButtonsContainer.style.display = "flex";
+                
+                mainActionBtn.style.display = "none";
+                stopBtn.style.display = "none";
+                autoDrawBtn.style.display = "none";
+                
+                skipBtn.style.display = "block";
+                numberOrderBtn.style.display = "none";
+                
+                toggleCategoryButtons(true);
+            } else if (state === "finished") {
+                actionButtonsContainer.style.display = "none";
+            }
+        }
+
+        // --- データ読み込み＆一時解析 ---
+        loadDataBtn.addEventListener('click', () => {
+            const txt = excelInput.value.trim();
+            if(!txt) return alert("貼り付け用のテキストエリアが空です。Excelからデータをコピペしてください。");
+            const lines = txt.split('\n');
+            if(lines.length < 2) return alert("見出し行とデータ行を入力してください。");
+
+            const headers = lines[0].split('\t').map(h => h.trim());
+            tempCategoryHeaders = headers.slice(4); 
+            
+            tempStudentData = {}; tempStudentCount = 0; tempCategoryValues = {}; 
+            tempCategoryHeaders.forEach(h => tempCategoryValues[h] = new Set());
+
+            for(let i = 1; i < lines.length; i++) {
+                if(!lines[i].trim()) continue;
+                const cols = lines[i].split('\t').map(c => c.trim());
+                if (cols.length >= 2) {
+                    const num = parseInt(cols[0]);
+                    const name = cols[1] || "";
+                    if (!isNaN(num) && name !== "") {
+                        tempStudentData[num] = { name: name, furi: cols[2] || "", jh: cols[3] || "", categories: {} };
+                        tempCategoryHeaders.forEach((h, idx) => {
+                            const val = cols[4 + idx] || "";
+                            tempStudentData[num].categories[h] = val;
+                            if(val) tempCategoryValues[h].add(val);
+                        });
+                        tempStudentCount++;
+                    }
+                }
+            }
+            
+            if(tempStudentCount > 0) {
+                modalStudentCount.innerText = tempStudentCount;
+                
+                // --- 自動レイアウト計算ロジック（6列均等割り、右側優先） ---
+                const cols = 6;
+                const baseCount = Math.floor(tempStudentCount / cols);
+                const remainder = tempStudentCount % cols;
+                let autoLayoutArr = new Array(cols).fill(baseCount);
+                
+                // 右側の列から優先的に人数を割り振る（インデックス：5, 4, 3, 2, 1, 0 の順）
+                const priority = [5, 4, 3, 2, 1, 0];
+                for (let i = 0; i < remainder; i++) {
+                    autoLayoutArr[priority[i]]++;
+                }
+                modalLayoutInput.value = autoLayoutArr.join(',');
+                
+                // 初期クラス名を設定
+                modalClassNameInput.value = "〇〇コース〇年";
+                
+                checkLayoutMatch();
+                dataConfirmModal.classList.add('show');
+            } else {
+                alert("有効な生徒データが見つかりませんでした。");
+            }
+        });
+
+        function generateCategoryButtons(categoryValues) {
+            dynamicControls.innerHTML = '';
+            statusText.style.display = 'none';
+
+            categoryHeaders.forEach(h => {
+                const vals = Array.from(categoryValues[h]).filter(v => v !== "");
+                if(vals.length === 0) return;
+
+                const groupDiv = document.createElement('div');
+                groupDiv.classList.add('category-group');
+
+                const titleDiv = document.createElement('div');
+                titleDiv.classList.add('category-title');
+                titleDiv.innerText = `【${h}】のグループ配置`;
+                groupDiv.appendChild(titleDiv);
+
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.classList.add('category-buttons');
+
+                vals.forEach(val => {
+                    const btn = document.createElement('button');
+                    btn.classList.add('cat-btn');
+                    btn.dataset.category = h; 
+                    btn.innerText = `${val} を配置`;
+                    btn.addEventListener('click', () => startCategoryPlacement(h, val));
+                    buttonsDiv.appendChild(btn);
+                });
+                groupDiv.appendChild(buttonsDiv);
+                dynamicControls.appendChild(groupDiv);
+            });
+        }
+
+        // --- 座席表初期化 ---
+        function initClassroom() {
+            const layoutStr = layoutInput.value;
+            const parsedLayout = layoutStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0);
+            if (parsedLayout.length === 0) return alert("正しいレイアウト形式(例: 5,6,6,6,7,7)にしてください。");
+
+            columnLayout = parsedLayout; totalStudents = columnLayout.reduce((sum, num) => sum + num, 0); 
+            
+            if (Object.keys(studentData).length === 0) {
+                remainingNumbers = Array.from({length: totalStudents}, (_, i) => i + 1);
+            } else {
+                remainingNumbers = Object.keys(studentData).map(Number).sort((a,b)=>a-b);
+            }
+
+            allDesks = []; fillingOrderDesks = []; classroom.innerHTML = ''; exportArea.style.display = 'none';
+            clearTimeout(sequenceTimeoutId);
+            isSpinning = false; isStopping = false; currentMode = ""; currentTargetIndex = -1;
+            isAutoContinuous = false; 
+            
+            deskCategoryMap = {};
+            categoryColorMap = {};
+            selectedCategoryHistory = []; 
+            colorIndex = 0;
+
+            updatePrintTitle();
+            updateLegendArea();
+
+            columnLayout.forEach((rowsInColumn) => {
+                const columnDiv = document.createElement('div');
+                columnDiv.classList.add('desk-column');
+                let colDesks = [];
+                for (let r = 0; r < rowsInColumn; r++) {
+                    const desk = document.createElement('div');
+                    desk.classList.add('desk'); desk.dataset.filled = "false";
+                    desk.innerHTML = `<div class="desk-empty"></div>`;
+                    desk.addEventListener('click', () => handleDeskClick(desk));
+                    allDesks.push(desk);
+                    colDesks.push(desk);
+                    columnDiv.appendChild(desk);
+                }
+                classroom.appendChild(columnDiv);
+                fillingOrderDesks.push(...colDesks); 
+            });
+
+            setButtonState("standby");
+            instruction.innerHTML = `【準備モード】事前に固定する席があればクリックして入力。`;
+            cancelAnimationFrame(animationId);
+            animate();
+            
+            setTimeout(resizeCaptureArea, 0);
+        }
+
+        function handleDeskClick(desk) {
+            if (currentMode !== "") return; 
+            if (desk.dataset.filled === "true") {
+                const num = parseInt(desk.dataset.num);
+                if (confirm(`この席（${num}番）の固定を取り消しますか？`)) {
+                    if(studentData[num]) { remainingNumbers.push(num); remainingNumbers.sort((a, b) => a - b); }
+                    desk.innerHTML = `<div class="desk-empty"></div>`; desk.dataset.filled = "false"; delete desk.dataset.num; desk.classList.remove('fixed');
+                    
+                    const idx = allDesks.indexOf(desk);
+                    delete deskCategoryMap[idx];
+
+                    if (remainingNumbers.length > 0) setButtonState("standby");
+                }
+                return;
+            }
+            const input = prompt(`固定する出席番号を入力してください:`);
+            if (input) {
+                const num = parseInt(input);
+                if (isNaN(num) || !remainingNumbers.includes(num)) return alert("未配置の正しい出席番号を入力してください。");
+                desk.dataset.num = num; desk.dataset.filled = "true"; desk.classList.add('fixed');
+                
+                const idx = allDesks.indexOf(desk);
+                deskCategoryMap[idx] = []; 
+
+                desk.innerHTML = getDeskHTML(num, idx);
+                remainingNumbers = remainingNumbers.filter(n => n !== num);
+                if (remainingNumbers.length === 0) finishSequence();
+            }
+        }
+
+        // 動的フォントサイズ＆文字間隔計算機能
+        function calculateFontSize(text) {
+            let maxFontSize = 18; 
+            let minFontSize = 10; 
+            let maxWidth = 124;   
+
+            measureCtx.font = `bold ${maxFontSize}px Meiryo`;
+            if (measureCtx.measureText(text).width <= maxWidth) {
+                return `${maxFontSize}px`;
+            }
+            
+            for (let s = maxFontSize - 1; s >= minFontSize; s--) {
+                measureCtx.font = `bold ${s}px Meiryo`;
+                if (measureCtx.measureText(text).width <= maxWidth) {
+                    return `${s}px; letter-spacing: 0.5px;`;
+                }
+            }
+            
+            return `${minFontSize}px; letter-spacing: 0px;`;
+        }
+
+        // 名札風の中身をパース
+        function getDeskHTML(num, deskIndex) {
+            if (studentData[num]) {
+                const d = studentData[num];
+                const fontSizeStyle = calculateFontSize(d.name);
+                
+                let tagsText = "";
+                let colorBarHTML = "";
+                
+                if (deskCategoryMap[deskIndex] && deskCategoryMap[deskIndex].length > 0) {
+                    const assignedCats = deskCategoryMap[deskIndex];
+                    tagsText = assignedCats.join(" / ");
+                    
+                    colorBarHTML = `<div class="desk-colorbar">`;
+                    assignedCats.forEach(catVal => {
+                        const color = categoryColorMap[catVal] || "#ccc";
+                        colorBarHTML += `<div class="colorbar-segment" style="background-color: ${color}"></div>`;
+                    });
+                    colorBarHTML += `</div>`;
+                }
+                
+                const tagsDiv = tagsText ? `<div class="desk-tags">${tagsText}</div>` : `<div class="desk-tags" style="visibility:hidden; height:1px; margin:0;"></div>`;
+                
+                return `
+                    <div class="desk-top"><span class="d-num">${num}</span><span class="d-jh">${d.jh}</span></div>
+                    <div class="desk-middle">${d.furi}</div>
+                    ${tagsDiv}
+                    <div class="desk-bottom" style="font-size: ${fontSizeStyle}">${d.name}</div>
+                    ${colorBarHTML}
+                `;
+            }
+            return `<div class="desk-empty">${num}</div>`;
+        }
+
+        // --- ルーレットの描画と物理演算 ---
+        function drawRoulette() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (remainingNumbers.length === 0) {
+                ctx.fillStyle = "#2f3542"; ctx.font = "bold 24px Meiryo"; ctx.textAlign = "center";
+                ctx.fillText("完了！", centerX, centerY+8); return;
+            }
+            const arc = Math.PI * 2 / remainingNumbers.length;
+            for (let i = 0; i < remainingNumbers.length; i++) {
+                const angle = currentAngle + i * arc;
+                ctx.beginPath(); ctx.fillStyle = `hsl(${(remainingNumbers[i] * 137.5) % 360}, 70%, 55%)`;
+                ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, angle, angle + arc, false); ctx.fill(); 
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.5)"; ctx.stroke(); ctx.save(); ctx.fillStyle = "white";
+                ctx.font = `bold ${remainingNumbers.length > 20 ? 12 : 16}px Meiryo`;
+                ctx.translate( centerX + Math.cos(angle + arc / 2) * (radius - 20), centerY + Math.sin(angle + arc / 2) * (radius - 20) );
+                ctx.rotate(angle + arc / 2 + Math.PI / 2); ctx.textAlign = "center";
+                ctx.fillText(remainingNumbers[i].toString(), 0, 5); ctx.restore();
+            }
+            ctx.beginPath(); ctx.arc(centerX, centerY, 15, 0, Math.PI * 2); ctx.fillStyle = "#ffffff"; ctx.fill(); 
+            ctx.strokeStyle="#333"; ctx.lineWidth=2; ctx.stroke();
+        }
+
+        function animate() {
+            if (isSpinning) {
+                currentAngle += spinVelocity;
+                if (isStopping) {
+                    spinVelocity *= 0.94; 
+                    if (spinVelocity < 0.002) { 
+                        isSpinning = false; isStopping = false; spinVelocity = 0; 
+                        if(currentMode === "roulette") decideSeatRoulette(); 
+                    }
+                }
+            }
+            drawRoulette();
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // --- 自動席替えスタート ---
+        mainActionBtn.addEventListener('click', () => {
+            if (currentMode === "") {
+                if (remainingNumbers.length === 0) return;
+                currentMode = "roulette";
+                updatePrintTitle();
+
+                setButtonState("spinning"); 
+                instruction.innerHTML = "【ルーレット回転中】「⏹ ストップ」を押してください";
+                nextRouletteStep();
+            }
+        });
+
+        function nextRouletteStep() {
+            if (currentMode !== "roulette") return;
+            currentTargetIndex = fillingOrderDesks.findIndex(d => d.dataset.filled === "false");
+            if (currentTargetIndex === -1 || remainingNumbers.length === 0) return finishSequence();
+
+            fillingOrderDesks[currentTargetIndex].classList.add('target');
+            
+            isSpinning = true; isStopping = false;
+            spinVelocity = 0.5 + Math.random() * 0.1;
+
+            if (isAutoContinuous) {
+                sequenceTimeoutId = setTimeout(() => {
+                    if (currentMode === "roulette") isStopping = true;
+                }, 400); 
+            }
+        }
+
+        // ストップボタンで停止
+        stopBtn.addEventListener('click', () => {
+            if (currentMode === "roulette" && isSpinning && !isStopping) {
+                isStopping = true;
+                stopBtn.disabled = true; 
+                autoDrawBtn.disabled = true;
+            }
+        });
+
+        // 自動連続抽選ボタン
+        autoDrawBtn.addEventListener('click', () => {
+            if (currentMode === "roulette" && isSpinning && !isStopping) {
+                isAutoContinuous = true;
+                isStopping = true; 
+                setButtonState("auto_spinning");
+                instruction.innerHTML = "【自動連続抽選中 (約1秒テンポ)】";
+            }
+        });
+
+        function decideSeatRoulette() {
+            if (currentMode !== "roulette") return;
+            let nAngle = currentAngle % (Math.PI * 2); if (nAngle < 0) nAngle += Math.PI * 2;
+            let oAngle = Math.PI * 1.5 - nAngle; if (oAngle < 0) oAngle += Math.PI * 2;
+            const wIndex = Math.floor(oAngle / (Math.PI * 2 / remainingNumbers.length));
+            const winNum = remainingNumbers[wIndex];
+
+            const desk = fillingOrderDesks[currentTargetIndex];
+            const deskIndex = allDesks.indexOf(desk);
+            
+            desk.dataset.num = winNum; desk.dataset.filled = "true";
+            desk.classList.remove('target'); desk.classList.add('filled');
+            
+            deskCategoryMap[deskIndex] = []; 
+            
+            desk.innerHTML = getDeskHTML(winNum, deskIndex);
+            remainingNumbers.splice(wIndex, 1);
+            
+            if (remainingNumbers.length === 0) {
+                finishSequence();
+            } else {
+                if (isAutoContinuous) {
+                    sequenceTimeoutId = setTimeout(nextRouletteStep, 300); 
+                } else {
+                    instruction.innerHTML = "【決定！】次のルーレットを準備中...";
+                    sequenceTimeoutId = setTimeout(() => {
+                        if (currentMode === "roulette") {
+                            setButtonState("spinning"); 
+                            instruction.innerHTML = "【ルーレット回転中】「⏹ ストップ」を押してください";
+                            nextRouletteStep();
+                        }
+                    }, 500); 
+                }
+            }
+        }
+
+        // --- 出席番号順に一瞬で配置 ---
+        numberOrderBtn.addEventListener('click', () => {
+            if (currentMode === "") {
+                if (remainingNumbers.length === 0) return;
+                currentMode = "numberOrder";
+                
+                // タイトルに「出席番号順」を追記
+                if (!selectedCategoryHistory.includes("出席番号順")) {
+                    selectedCategoryHistory.push("出席番号順");
+                }
+                updatePrintTitle();
+
+                let queue = [...remainingNumbers].sort((a,b)=>a-b);
+
+                allDesks.forEach((desk, deskIndex) => {
+                    if (desk.dataset.filled === "false" && queue.length > 0) {
+                        const winNum = queue.shift();
+                        remainingNumbers = remainingNumbers.filter(n => n !== winNum);
+                        desk.dataset.num = winNum; desk.dataset.filled = "true"; desk.classList.add('filled');
+                        
+                        deskCategoryMap[deskIndex] = [];
+                        desk.innerHTML = getDeskHTML(winNum, deskIndex);
+                    }
+                });
+
+                if (remainingNumbers.length === 0) {
+                    finishSequence();
+                } else {
+                    currentMode = "";
+                    setButtonState("standby");
+                    instruction.innerHTML = "【配置完了】続きの配置を選べます。";
+                }
+                drawRoulette(); 
+            }
+        });
+
+        // --- カテゴリ別に一瞬で配置 ---
+        function startCategoryPlacement(catName, value) {
+            let queue = remainingNumbers.filter(num => studentData[num] && studentData[num].categories[catName] === value).sort((a,b)=>a-b);
+            if (queue.length === 0) return alert(`対象の ${value} の生徒はすべて配置済みか、データがありません。`);
+
+            currentMode = "category"; 
+
+            if (!selectedCategoryHistory.includes(value)) {
+                selectedCategoryHistory.push(value);
+            }
+            
+            updatePrintTitle();
+
+            if (!categoryColorMap[value]) {
+                categoryColorMap[value] = colorPalette[colorIndex % colorPalette.length];
+                colorIndex++;
+            }
+            updateLegendArea(); 
+
+            allDesks.forEach((desk, deskIndex) => {
+                if (desk.dataset.filled === "false" && queue.length > 0) {
+                    const winNum = queue.shift();
+                    remainingNumbers = remainingNumbers.filter(n => n !== winNum);
+                    desk.dataset.num = winNum; desk.dataset.filled = "true"; desk.classList.add('filled');
+                    
+                    if (!deskCategoryMap[deskIndex]) {
+                        deskCategoryMap[deskIndex] = [];
+                    }
+                    if (deskCategoryMap[deskIndex].length < 3 && !deskCategoryMap[deskIndex].includes(value)) {
+                        deskCategoryMap[deskIndex].push(value);
+                    }
+                    
+                    desk.innerHTML = getDeskHTML(winNum, deskIndex);
+                } 
+                else if (desk.dataset.filled === "true" && desk.dataset.num) {
+                    const currentNum = parseInt(desk.dataset.num);
+                    if (studentData[currentNum] && studentData[currentNum].categories[catName] === value) {
+                        if (!deskCategoryMap[deskIndex]) deskCategoryMap[deskIndex] = [];
+                        
+                        if (deskCategoryMap[deskIndex].length < 3 && !deskCategoryMap[deskIndex].includes(value)) {
+                            deskCategoryMap[deskIndex].push(value);
+                            desk.innerHTML = getDeskHTML(currentNum, deskIndex); 
+                        }
+                    }
+                }
+            });
+
+            if (remainingNumbers.length === 0) {
+                finishSequence();
+            } else {
+                currentMode = "";
+                setButtonState("standby");
+                toggleCategoryButtons(false); 
+                instruction.innerHTML = `【配置完了】「${value}」の条件をタイトルと座席に反映しました。`;
+            }
+            drawRoulette(); 
+        }
+
+        // --- 演出スキップ ---
+        skipBtn.addEventListener('click', () => {
+            clearTimeout(sequenceTimeoutId);
+            isSpinning = false; isStopping = false; spinVelocity = 0;
+            isAutoContinuous = false;
+            
+            if (currentTargetIndex !== -1 && fillingOrderDesks[currentTargetIndex]) {
+                fillingOrderDesks[currentTargetIndex].classList.remove('target');
+            }
+
+            if (currentMode === "roulette") {
+                let shuffled = [...remainingNumbers].sort(() => Math.random() - 0.5);
+                allDesks.forEach((desk, deskIndex) => {
+                    if (desk.dataset.filled === "false" && shuffled.length > 0) {
+                        const winNum = shuffled.shift();
+                        desk.dataset.num = winNum; desk.dataset.filled = "true"; desk.classList.add('filled');
+                        desk.innerHTML = getDeskHTML(winNum, deskIndex);
+                    }
+                });
+                remainingNumbers = [];
+                finishSequence();
+                drawRoulette();
+            }
+        });
+
+        // リセットボタン
+        resetBtn.addEventListener('click', () => {
+            if (confirm("配置をリセットして最初からやり直しますか？")) {
+                initClassroom();
+            }
+        });
+
+        function finishSequence() {
+            currentMode = ""; clearTimeout(sequenceTimeoutId);
+            isSpinning = false; isStopping = false; spinVelocity = 0;
+            isAutoContinuous = false;
+            setButtonState("finished"); 
+            activeCategoryHeader = ""; 
+            instruction.innerHTML = "✨ 席替えがすべて完了しました！ ✨";
+            exportArea.style.display = 'flex';
+        }
+
+        function toggleCategoryButtons(forceDisableAll) {
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (forceDisableAll) {
+                    btn.disabled = true;
+                } else {
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        // --- CSV(Excel下揃え) & 画像 & PDF 保存 ---
+        function getSeatData2DArray() {
+            const columns = document.querySelectorAll('.desk-column');
+            let maxRows = 0; const grid = [];
+            columns.forEach(col => {
+                const desks = col.querySelectorAll('.desk'); 
+                const colData = Array.from(desks).map(d => d.dataset.num || ""); 
+                grid.push(colData);
+                if (colData.length > maxRows) maxRows = colData.length;
+            });
+            const rowsData = [];
+            for (let csvRow = 0; csvRow < maxRows; csvRow++) {
+                const row = [];
+                const idx = (maxRows - 1) - csvRow;
+                for (let c = 0; c < grid.length; c++) row.push(grid[c][idx] || "");
+                rowsData.push(row);
+            }
+            return rowsData; 
+        }
+
+        document.getElementById('csvBtn').addEventListener('click', () => {
+            const rows = getSeatData2DArray();
+            let csvContent = "\uFEFF" + rows.map(r => r.join(",")).join("\r\n");
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }));
+            link.download = "seat_layout.csv"; link.click();
+        });
+
+        document.getElementById('imageBtn').addEventListener('click', () => {
+            const target = document.getElementById('captureArea');
+            const originalTransform = target.style.transform;
+            target.style.transform = 'none';
+            html2canvas(target, { backgroundColor: '#f5f6fa', scale: 2 }).then(canvas => {
+                const link = document.createElement("a"); link.href = canvas.toDataURL("image/png");
+                link.download = "seat_layout.png"; link.click();
+                target.style.transform = originalTransform; 
+            });
+        });
+
+        document.getElementById('pdfBtn').addEventListener('click', () => {
+            const target = document.getElementById('captureArea');
+            const originalTransform = target.style.transform;
+            target.style.transform = 'none'; 
+
+            const { jsPDF } = window.jspdf;
+            
+            html2canvas(target, { backgroundColor: '#f5f6fa', scale: 2 }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const imgProps = pdf.getImageProperties(imgData);
+                const imgRatio = imgProps.width / imgProps.height;
+                
+                let renderWidth = pdfWidth;
+                let renderHeight = pdfWidth / imgRatio;
+                
+                if (renderHeight > pdfHeight) {
+                    renderHeight = pdfHeight;
+                    renderWidth = pdfHeight * imgRatio;
+                }
+                
+                const x = (pdfWidth - renderWidth) / 2;
+                const y = (pdfHeight - renderHeight) / 2;
+                
+                pdf.addImage(imgData, 'PNG', x, y, renderWidth, renderHeight);
+                pdf.save('seat_layout.pdf');
+                
+                target.style.transform = originalTransform; 
+            });
+        });
+
+        // 初回はデータがないので空の状態で生成
+        initClassroom();
+    </script>
+</body>
+</html>
