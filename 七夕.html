@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>超デジタル七夕2026 - 星屑のパーティクル・ナイト</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020617;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas-area {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at 45% 50%, #0b1329 0%, #020617 100%);
+            cursor: pointer;
+        }
+
+        #control-panel {
+            width: 380px;
+            background: rgba(15, 23, 42, 0.92);
+            border-left: 2px solid #1e293b;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-sizing: border-box;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+
+        .panel-header h1 {
+            font-size: 22px;
+            margin: 0 0 5px 0;
+            color: #38bdf8;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        }
+
+        .panel-header p {
+            font-size: 12px;
+            color: #94a3b8;
+            margin: 0;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #e2e8f0;
+        }
+
+        .btn-random-small {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .btn-random-small:hover {
+            background: rgba(56, 189, 248, 0.3);
+        }
+
+        .input-group input, .input-group textarea {
+            background: #090d16;
+            border: 1px solid #334155;
+            padding: 12px;
+            color: #ffffff;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+        }
+
+        .btn-shoot {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            border: none;
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            transition: all 0.2s;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            margin-top: 5px;
+        }
+
+        .btn-shoot:active {
+            transform: scale(0.98);
+        }
+
+        .counter-badge {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 13px;
+            color: #38bdf8;
+        }
+
+        /* 短冊拡大用オーバーレイ */
+        #wish-modal {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.75);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+
+        #modal-card {
+            width: 260px;
+            height: 520px;
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(255,255,255,0.2);
+            padding: 40px 30px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            animation: popUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        #modal-wish-text {
+            color: #0f172a;
+            font-size: 26px;
+            font-weight: bold;
+            line-height: 1.6;
+            writing-mode: vertical-rl;
+            -webkit-writing-mode: vertical-rl;
+            text-orientation: upright;
+            height: 70%;
+            letter-spacing: 4px;
+            overflow: hidden;
+        }
+
+        #modal-name-text {
+            margin-top: auto;
+            color: rgba(15, 23, 42, 0.75);
+            font-size: 16px;
+            font-weight: bold;
+            border-top: 2px dashed rgba(15, 23, 42, 0.3);
+            width: 100%;
+            text-align: center;
+            padding-top: 15px;
+        }
+
+        .modal-buttons {
+            position: absolute;
+            bottom: -70px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-modal {
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s;
+        }
+
+        .btn-close-modal {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+        }
+
+        .btn-delete-modal {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.6);
+            color: #f87171;
+        }
+
+        .btn-delete-modal:hover {
+            background: rgba(239, 68, 68, 0.4);
+            color: white;
+        }
+
+        @keyframes popUp { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        @media (max-width: 768px) {
+            #app-container { flex-direction: column; }
+            #control-panel { width: 100%; height: 350px; border-left: none; border-top: 2px solid #1e293b; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="canvas-area">
+        <canvas id="starCanvas"></canvas>
+        
+        <div id="wish-modal" onclick="closeModal()">
+            <div id="modal-card" onclick="event.stopPropagation()">
+                <div id="modal-wish-text"></div>
+                <div id="modal-name-text"></div>
+                <div class="modal-buttons">
+                    <button class="btn-modal btn-close-modal" onclick="closeModal()">✕ 閉じる</button>
+                    <button class="btn-modal btn-delete-modal" onclick="deleteCurrentWish()">🗑️ この短冊をはずす</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="control-panel">
+        <div class="panel-header">
+            <h1>七夕流星シンセサイザー</h1>
+            <p>あなたの願いを星に乗せて、天の川へ打ち上げよう</p>
+        </div>
+
+        <div class="counter-badge">
+            🎋 現在飾られている短冊: <span id="wishCount">0</span> 枚
+        </div>
+
+        <div class="input-group">
+            <div class="label-row">
+                <label for="userName">ニックネーム</label>
+                <button class="btn-random-small" onclick="generateRandomName()">🎲 おまかせ名</button>
+            </div>
+            <input type="text" id="userName" placeholder="おりひめ" maxlength="10">
+        </div>
+
+        <div class="input-group">
+            <div class="label-row">
+                <label for="userWish">ねがいごと</label>
+                <button class="btn-random-small" onclick="generateRandomWish()">🎲 おまかせ願い</button>
+            </div>
+            <textarea id="userWish" rows="3" placeholder="ここに願い事を書こう！" maxlength="30"></textarea>
+        </div>
+
+        <button class="btn-shoot" onclick="shootMeteor()">願いを夜空に放つ！ ☄️</button>
+    </div>
+</div>
+
+<script>
+    const namePrefixes = ["天の川", "織姫", "彦星", "夏の大三角", "ベガ", "アルタイル", "宇宙", "星屑", "満月", "カシオペア", "シューティングスター", "真夏夜", "銀河鉄道", "流星群", "星雲"];
+    const nameSuffixes = ["の友", "の隣人", "の迷子", "のランナー", "のマスター", "の観測隊", "の乗客", "のハンター", "の精霊", "の守護職", "のファン", "の案内人", "のスナイパー", "の仕掛け人"];
+    
+    const baseWishes = [
+        "次の定期テストで赤点を回避できますように！",
+        "クラス替えしても今のメンバーとずっと仲良しでいたい",
+        "推しのドームツアーの神席が当選しますように！",
+        "毎朝遅刻せずにバシッと起きられる超能力が欲しい",
+        "iPadのタイピング速度が爆速になりますように",
+        "美味しいラーメンを毎日お腹いっぱい食べたい！",
+        "いつか宇宙旅行に行ける時代になりますように",
+        "部活動の大会で自己ベストを更新できますように！",
+        "夏休みが今の3倍くらいの長さになりますように",
+        "英語のリスニングが呪文じゃなくて言葉に聞こえますように",
+        "学食の唐揚げ定食が売り切れませんように",
+        "スマホの通信制限が一生来ませんように！",
+        "今日引くガチャで最高レアが出ますように！"
+    ];
+
+    let prefixDeck = [], suffixDeck = [], wishDeck = [];
+
+    function shuffleArray(array) {
+        const result = [...array];
+        for (let i = result.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+    }
+
+    function generateRandomName() {
+        if (prefixDeck.length === 0) prefixDeck = shuffleArray(namePrefixes);
+        if (suffixDeck.length === 0) suffixDeck = shuffleArray(nameSuffixes);
+        document.getElementById('userName').value = prefixDeck.pop() + suffixDeck.pop();
+    }
+
+    function generateRandomWish() {
+        if (wishDeck.length === 0) wishDeck = shuffleArray(baseWishes);
+        document.getElementById('userWish').value = wishDeck.pop();
+    }
+
+    const canvas = document.getElementById('starCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let particles = [];    
+    let meteors = [];      
+    let nativeMeteors = []; 
+    let milkeyWayStars = []; // 👑 くっきり見える天の川の常設星プール
+    let hungWishes = [];   
+    let bambooBranches = []; 
+    let isModalOpen = false;
+    let selectedWishTarget = null; 
+
+    function resizeCanvas() {
+        const area = document.getElementById('canvas-area');
+        canvas.width = area.offsetWidth;
+        canvas.height = area.offsetHeight;
+        generateBambooStructure(); 
+        initMilkyWay(); // 👑 画面サイズに合わせて天の川を生成
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // 👑 【新設】「星の帯」としての天の川の初期化
+    function initMilkyWay() {
+        milkeyWayStars = [];
+        const density = 250; // 天の川を構成する星の数
+        for (let i = 0; i < density; i++) {
+            // 斜めに横切るサインカーブに沿って星を配置
+            const x = Math.random() * canvas.width;
+            // 天の川の中心線 (y = ax + b っぽいなだらかな曲線)
+            const centerY = canvas.height * 0.18 + (x * 0.08) + Math.sin(x * 0.003) * 30;
+            // 中心から上下にランダムに散らす（中央ほど密度を濃く）
+            const offset = (Math.random() - 0.5) * (Math.random() - 0.5) * (canvas.height * 0.25);
+            
+            milkeyWayStars.push({
+                x: x,
+                y: centerY + offset,
+                size: Math.random() * 1.8 + 0.6,
+                alpha: Math.random() * 0.4 + 0.3, // 存在感のある不透明度
+                speedX: -(Math.random() * 0.12 + 0.04) // 左にゆったり流れる
+            });
+        }
+    }
+
+    function generateBambooStructure() {
+        bambooBranches = [];
+        for (let i = 0; i < 10; i++) {
+            const pct = 0.15 + (i * 0.08); 
+            const side = (i % 2 === 0) ? 1 : -1; 
+            const length = 180 + Math.random() * 120; 
+            const angle = (side === 1) ? -Math.PI / 8 : -Math.PI * 7 / 8; 
+
+            bambooBranches.push({
+                id: i, attachPct: pct, length: length, angle: angle, side: side
+            });
+        }
+    }
+
+    function getSlotIndexInBranch(branchId, wishId) {
+        const filtered = hungWishes.filter(w => w.branchRef.id === branchId);
+        return filtered.findIndex(w => w.id === wishId);
+    }
+
+    class Particle {
+        constructor(x, y, color, size, speedX, speedY, life) {
+            this.x = x; this.y = y; this.color = color; this.size = size;
+            this.speedX = speedX; this.speedY = speedY; this.maxLife = life; this.life = life;
+        }
+        update() { this.x += this.speedX; this.y += this.speedY; this.life--; }
+        draw() {
+            ctx.save(); ctx.globalAlpha = this.life / this.maxLife; ctx.fillStyle = this.color;
+            ctx.shadowBlur = this.size * 2;
+            ctx.shadowColor = this.color;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        }
+    }
+
+    class Meteor {
+        constructor(name, wish, targetBranch) {
+            this.id = Math.random().toString(36).substring(2, 9); 
+            this.name = name; this.wish = wish;
+            this.x = canvas.width + 50; this.y = Math.random() * (canvas.height * 0.3);
+            this.targetBranch = targetBranch;
+            this.color = `hsl(${Math.random() * 40 + 180}, 100%, 75%)`;
+            this.active = true; this.progress = 0; this.speed = 0.02; 
+            
+            const currentCount = hungWishes.filter(w => w.branchRef.id === targetBranch.id).length;
+            this.tempSlot = currentCount;
+        }
+        update() {
+            this.progress += this.speed;
+            const currentTarget = getBranchCoordinates(this.targetBranch, this.tempSlot);
+            this.x = (canvas.width + 50) + (currentTarget.x - (canvas.width + 50)) * this.progress;
+            this.y = 100 + (currentTarget.y - 100) * this.progress;
+            
+            if (Math.random() > 0.1) particles.push(new Particle(this.x, this.y, this.color, Math.random() * 2.5 + 1, -2, (Math.random()-0.5), 20));
+            if (this.progress >= 1.0) { this.explode(currentTarget.x, currentTarget.y); this.active = false; }
+        }
+        explode(tx, ty) {
+            for (let i = 0; i < 35; i++) {
+                const angle = Math.random() * Math.PI * 2; const speed = Math.random() * 3 + 1;
+                particles.push(new Particle(tx, ty, '#38bdf8', Math.random() * 3 + 1, Math.cos(angle)*speed, Math.sin(angle)*speed, 40));
+            }
+            hungWishes.push({
+                id: this.id, name: this.name, wish: this.wish, branchRef: this.targetBranch, 
+                color: `hsl(${Math.random() * 360}, 90%, 75%)`, angleOffset: Math.random() * Math.PI, swingSpeed: Math.random() * 0.015 + 0.01,
+                lastRenderedPos: {x: tx, y: ty, w: 30, h: 90}
+            });
+            document.getElementById('wishCount').innerText = hungWishes.length;
+        }
+        draw() {
+            ctx.save(); ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+            ctx.beginPath(); ctx.arc(this.x, this.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        }
+    }
+
+    class NativeMeteor {
+        constructor() {
+            this.x = Math.random() * (canvas.width * 0.4) + canvas.width * 0.6;
+            this.y = -20;
+            this.speedX = -(Math.random() * 6 + 5); // 少し速く直線的に
+            this.speedY = Math.random() * 3 + 2;
+            this.active = true;
+            this.color = '#38bdf8';
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.x < -100 || this.y > canvas.height + 50) this.active = false;
+        }
+        draw() {
+            ctx.save();
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#0ea5e9';
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x - this.speedX * 2.5, this.y - this.speedY * 2.5);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    function getBranchCoordinates(b, slotIndex = 0) {
+        const h = canvas.height;
+        const wind = isModalOpen ? 0 : Math.sin(time * 0.012) * 25;
+
+        const startX = canvas.width * 0.35; const startY = h;
+        const controlX = canvas.width * 0.38 + wind; const controlY = h * 0.5;
+        const endX = canvas.width * 0.32 + wind * 1.6; const endY = 60;
+
+        const t = b.attachPct;
+        const attachX = (1-t)*(1-t)*startX + 2*(1-t)*t*controlX + t*t*endX;
+        const attachY = (1-t)*(1-t)*startY + 2*(1-t)*t*controlY + t*t*endY;
+
+        const branchWind = isModalOpen ? 0 : Math.sin(time * 0.018 + b.attachPct * 12) * 0.06; 
+        const currentAngle = b.angle + branchWind;
+        
+        const tipX = attachX + Math.cos(currentAngle) * b.length;
+        const tipY = attachY + Math.sin(currentAngle) * b.length;
+
+        const offsetLength = Math.max(30, b.length - 20 - (slotIndex * 32));
+        return { x: attachX + Math.cos(currentAngle) * offsetLength, y: attachY + Math.sin(currentAngle) * offsetLength, tipX: tipX, tipY: tipY, attachX: attachX, attachY: attachY, angle: currentAngle };
+    }
+
+    function drawLeaf(x, y, angle, size) {
+        ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+        const grad = ctx.createLinearGradient(0, 0, size, 0);
+        grad.addColorStop(0, '#34d399'); grad.addColorStop(0.4, '#059669'); grad.addColorStop(1, '#064e3b'); 
+        ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(size * 0.3, -size * 0.22, size, 0); ctx.quadraticCurveTo(size * 0.3, size * 0.22, 0, 0);
+        ctx.fill(); ctx.restore();
+    }
+
+    let time = 0;
+    function loop() {
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.18)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        time++;
+
+        // 👑 1. 【くっきり化】常設された「天の川の星帯」を最背面に描画・更新
+        milkeyWayStars.forEach(s => {
+            if (!isModalOpen) s.x += s.speedX; // 左へ流す
+            if (s.x < 0) s.x = canvas.width;  // ループ
+
+            // チカチカ瞬くエフェクト
+            const twinkle = s.alpha + Math.sin(time * 0.05 + s.x) * 0.15;
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(0.1, Math.min(1, twinkle));
+            ctx.fillStyle = '#fef08a'; // ほんのりゴールドがかった美しい星の白
+            ctx.shadowBlur = b = s.size * 2;
+            ctx.shadowColor = '#fff';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // 👑 2. 空間全体にふんわり舞い降りる大きめの星屑 (サイズ 2.0px〜4.5px へ拡大)
+        if (time % 2 === 0) {
+            particles.push(new Particle(
+                Math.random() * canvas.width, 
+                Math.random() * (canvas.height * 0.85), 
+                Math.random() > 0.2 ? 'rgba(241, 245, 249, 0.5)' : '#38bdf8', 
+                Math.random() * 2.5 + 2.0, // 👑 視認しやすい大きめサイズ
+                (Math.random() - 0.5) * 0.1, 
+                Math.random() * 0.2 + 0.08,    
+                400                          
+            ));
+        }
+
+        // 天然の流れ星判定
+        if (time % 60 === 0 && Math.random() < 0.015 && nativeMeteors.length < 2) {
+            nativeMeteors.push(new NativeMeteor());
+        }
+
+        const h = canvas.height;
+        const wind = isModalOpen ? 0 : Math.sin(time * 0.012) * 25;
+
+        // 竹の主幹
+        ctx.save(); ctx.strokeStyle = '#047857'; ctx.lineWidth = 11; 
+        ctx.lineCap = 'round'; ctx.beginPath();
+        ctx.moveTo(canvas.width * 0.35, h); ctx.quadraticCurveTo(canvas.width * 0.38 + wind, h * 0.5, canvas.width * 0.32 + wind * 1.6, 60);
+        ctx.stroke(); ctx.restore();
+
+        const growthFactor = Math.min(1.4, 1.0 + (hungWishes.length * 0.02));
+
+        // 枝葉のレンダリング
+        bambooBranches.forEach(b => {
+            const coord = getBranchCoordinates(b, 0);
+            ctx.save(); ctx.strokeStyle = '#065f46'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(coord.attachX, coord.attachY); ctx.lineTo(coord.tipX, coord.tipY); ctx.stroke(); ctx.restore();
+
+            const leafSize = 55 * growthFactor;
+            drawLeaf(coord.tipX, coord.tipY, coord.angle - 0.15, leafSize);
+            drawLeaf(coord.tipX, coord.tipY, coord.angle, leafSize * 1.15);
+            drawLeaf(coord.tipX, coord.tipY, coord.angle + 0.15, leafSize);
+
+            const midX = (coord.attachX + coord.tipX) / 2; const midY = (coord.attachY + coord.tipY) / 2;
+            drawLeaf(midX, midY, coord.angle + 0.4 * b.side, leafSize * 0.85);
+            drawLeaf(midX, midY, coord.angle - 0.2 * b.side, leafSize * 0.8);
+            
+            const rootQuartX = (coord.attachX + midX) / 2; const rootQuartY = (coord.attachY + midY) / 2;
+            drawLeaf(rootQuartX, rootQuartY, coord.angle + 0.35 * b.side, leafSize * 0.7);
+            drawLeaf(rootQuartX, rootQuartY, coord.angle - 0.25 * b.side, leafSize * 0.65);
+        });
+
+        particles.forEach((p, i) => { p.update(); p.draw(); if (p.life <= 0) particles.splice(i, 1); });
+        meteors.forEach((m, i) => { m.update(); m.draw(); if (!m.active) meteors.splice(i, 1); });
+        nativeMeteors.forEach((nm, i) => { nm.update(); nm.draw(); if (!nm.active) nativeMeteors.splice(i, 1); });
+
+        // 短冊
+        hungWishes.forEach(w => {
+            const dynamicSlot = getSlotIndexInBranch(w.branchRef.id, w.id);
+            const coord = getBranchCoordinates(w.branchRef, dynamicSlot);
+            const swing = isModalOpen ? 0 : Math.sin(time * w.swingSpeed + w.angleOffset) * 0.12;
+
+            ctx.save();
+            ctx.translate(coord.x, coord.y + 12); 
+            ctx.rotate(swing);
+
+            ctx.fillStyle = w.color;
+            ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(0,0,0,0.4)';
+            ctx.fillRect(-15, 0, 30, 90);
+
+            w.lastRenderedPos = { x: coord.x - 15, y: coord.y + 12, w: 30, h: 90 };
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 6); ctx.stroke();
+
+            ctx.fillStyle = '#0f172a'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+            const charHeight = 12;
+            for(let i=0; i<w.wish.length && i<6; i++) {
+                ctx.fillText(w.wish[i], 0, 20 + (i * charHeight));
+            }
+            if(w.wish.length > 6) ctx.fillText('..', 0, 20 + (5 * charHeight) + 4);
+
+            ctx.font = '9px sans-serif'; ctx.fillStyle = 'rgba(15,23,42,0.65)';
+            ctx.fillText(w.name.substring(0,4), 0, 84);
+            ctx.restore();
+        });
+
+        requestAnimationFrame(loop);
+    }
+
+    function shootMeteor() {
+        const nameInput = document.getElementById('userName');
+        const wishInput = document.getElementById('userWish');
+        const name = nameInput.value.trim() || "ななしさん";
+        const wish = wishInput.value.trim();
+
+        if (!wish) { alert("願い事を入力するか、おまかせボタンを押してね🎋"); return; }
+        
+        const sortedBranches = [...bambooBranches].sort((a, b) => {
+            const countA = hungWishes.filter(w => w.branchRef.id === a.id).length;
+            const countB = hungWishes.filter(w => w.branchRef.id === b.id).length;
+            return countA - countB;
+        });
+        
+        const poolSize = Math.min(5, sortedBranches.length);
+        const selectedBranch = sortedBranches[Math.floor(Math.random() * poolSize)];
+
+        meteors.push(new Meteor(name, wish, selectedBranch));
+        wishInput.value = "";
+    }
+
+    canvas.addEventListener('click', (e) => {
+        if (isModalOpen) return;
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        for (let i = hungWishes.length - 1; i >= 0; i--) {
+            const pos = hungWishes[i].lastRenderedPos;
+            if (clickX >= pos.x - 6 && clickX <= pos.x + pos.w + 6 &&
+                clickY >= pos.y - 6 && clickY <= pos.y + pos.h + 6) {
+                openModal(hungWishes[i]);
+                break;
+            }
+        }
+    });
+
+    function openModal(wishObj) {
+        isModalOpen = true;
+        selectedWishTarget = wishObj; 
+        const modal = document.getElementById('wish-modal');
+        const card = document.getElementById('modal-card');
+        
+        document.getElementById('modal-wish-text').innerText = wishObj.wish;
+        document.getElementById('modal-name-text').innerText = `🎋 ${wishObj.name} さんの願い`;
+        
+        card.style.backgroundColor = wishObj.color;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        isModalOpen = false;
+        selectedWishTarget = null;
+        document.getElementById('wish-modal').style.display = 'none';
+    }
+
+    function deleteCurrentWish() {
+        if (!selectedWishTarget) return;
+        hungWishes = hungWishes.filter(w => w.id !== selectedWishTarget.id);
+        document.getElementById('wishCount').innerText = hungWishes.length;
+        closeModal();
+    }
+
+    function handleTouch(x, y) {
+        if (isModalOpen) return;
+        for(let i=0; i<2; i++) {
+            particles.push(new Particle(x, y, `hsl(${(time * 0.6) % 360}, 95%, 75%)`, Math.random() * 3 + 1, (Math.random()-0.5)*1.5, (Math.random()-0.5)*1.5, 30));
+        }
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        handleTouch(e.clientX - rect.left, e.clientY - rect.top);
+    });
+    canvas.addEventListener('touchmove', (e) => {
+        if (isModalOpen) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        handleTouch(touch.clientX - rect.left, touch.clientY - rect.top);
+    }, { passive: false });
+
+    resizeCanvas();
+    loop();
+</script>
+
+</body>
+</html>
