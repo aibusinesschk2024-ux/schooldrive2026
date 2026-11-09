@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>成績表加工ツール</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.5; }
+        .mode-select { display: flex; gap: 15px; margin-bottom: 25px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; }
+        .mode-btn { padding: 12px 24px; font-size: 15px; font-weight: bold; cursor: pointer; border: 2px solid #ccc; background: white; border-radius: 6px; flex: 1; transition: all 0.2s; }
+        .mode-btn:hover { background: #e9ecef; }
+        .mode-btn.active-smarky { border-color: #007bff; background: #e7f1ff; color: #004085; }
+        .mode-btn.active-denpyo { border-color: #28a745; background: #e1f5fe; color: #155724; }
+        
+        .tool-section { display: none; }
+        .tool-section.active { display: block; }
+
+        .box { padding: 25px; margin-bottom: 20px; text-align: center; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .box-smarky { border: 2px dashed #007bff; background: #f0f7ff; }
+        .box-denpyo { border: 2px dashed #28a745; background: #f4fbf6; }
+        
+        .controls { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .group { border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #fafafa; }
+        .group-title { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 5px; }
+        
+        table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+        td, th { border: 1px solid #ccc; padding: 6px; font-size: 12px; text-align: center; }
+        th { background: #eee; }
+        
+        button.action-btn { padding: 10px 20px; cursor: pointer; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; margin: 5px; }
+        button.action-btn:disabled { background: #ccc !important; cursor: not-allowed; }
+        .btn-view { background: #6c757d; }
+        .btn-copy-blue { background: #007bff; }
+        .btn-copy-green { background: #28a745; }
+        
+        .notice { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; margin-top: 15px; border-radius: 4px; font-size: 14px; color: #856404; }
+    </style>
+</head>
+<body>
+
+    <h2>総合校務データ加工ツール</h2>
+    <p>最初に行いたい作業を選択してください：</p>
+
+    <div class="mode-select">
+        <button class="mode-btn" id="btnModeSmarky">① Smarkyデータ加工<br><span style="font-size:11px; font-weight:normal;">(連番補完・1列ずつコピー)</span></button>
+        <button class="mode-btn" id="btnModeDenpyo">② 成績伝票データ加工<br><span style="font-size:11px; font-weight:normal;">(行間詰め・学期別一括コピー)</span></button>
+    </div>
+
+    <div id="sectionSmarky" class="tool-section">
+        <div class="box box-smarky" id="dropZoneSmarky">
+            <p>Smarkyの採点結果Excelデータをここにドラッグドロップ<br>または <input type="file" id="fileInputSmarky" accept=".xlsx, .xls"></p>
+        </div>
+        <div class="controls">
+            <button id="showSmarkyBtn" class="action-btn btn-view" disabled>① 加工データを確認する</button>
+            <button class="action-btn btn-copy-blue btn-smarky-copy" data-col="2" disabled>② 「知識・技能」をコピー</button>
+            <button class="action-btn btn-copy-blue btn-smarky-copy" data-col="3" disabled>③ 「思考・判断・表現」をコピー</button>
+        </div>
+    </div>
+
+    <div id="sectionDenpyo" class="tool-section">
+        <div class="box box-denpyo" id="dropZoneDenpyo">
+            <p>成績伝票のExcelデータをここにドラッグドロップ<br>または <input type="file" id="fileInputDenpyo" accept=".xlsx, .xls"></p>
+        </div>
+        <button id="showDenpyoBtn" class="action-btn btn-view" disabled>① 加工データを確認する</button>
+        <p style="font-weight: bold; margin-bottom: 5px; margin-top: 15px;">【個別コピーボタン】</p>
+        <div class="controls">
+            <div class="group">
+                <div class="group-title">1学期</div>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="single" data-col="3" disabled>② 1期末素点 (D)</button>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="multi" data-cols="4,5,6" disabled>③ 1期末観点 (E-G)</button>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="single" data-col="40" disabled>④ 仮評定 (AO)</button>
+            </div>
+            <div class="group">
+                <div class="group-title">2学期</div>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="single" data-col="11" disabled>⑤ 2中間素点 (L)</button>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="single" data-col="12" disabled>⑥ 2期末素点 (M)</button>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="multi" data-cols="14,15,16" disabled>⑦ 2期末観点 (O-Q)</button>
+            </div>
+            <div class="group">
+                <div class="group-title">3学期・学年末</div>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="single" data-col="21" disabled>⑧ 3期末素点 (V)</button>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="multi" data-cols="22,23,24" disabled>⑨ 3期末観点 (W-Y)</button>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="multi" data-cols="30,31,32" disabled>⑩ 学年末観点 (AE-AG)</button>
+                <button class="action-btn btn-copy-green btn-denpyo-copy" data-type="single" data-col="33" disabled>⑪ 評定 (AH)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notice">
+        <strong>⚠️ 貼り付け時の注意：</strong><br>
+        貼り付け先のエクセルに数式や書式が入っている場合があるため、通常の貼り付け（Ctrl + V）ではなく、<strong>「値貼り付け」</strong>を推奨します。<br>
+        <strong>【値貼り付けのショートカット】</strong><br>
+        ・コピー後にエクセルの貼り付け先を選択し、 <code>Ctrl</code> + <code>Alt</code> + <code>V</code> を押して「値」を選んでEnter（または <code>右クリック</code> → <code>V</code>）
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        // グローバル変数で各加工データを保持
+        let smarkyRows = [];
+        let denpyoRows = [];
+
+        // UI切替用要素
+        const btnSmarky = document.getElementById('btnModeSmarky');
+        const btnDenpyo = document.getElementById('btnModeDenpyo');
+        const secSmarky = document.getElementById('sectionSmarky');
+        const secDenpyo = document.getElementById('sectionDenpyo');
+        const outputDiv = document.getElementById('output');
+
+        // モード選択の切り替えイベント
+        btnSmarky.onclick = () => {
+            btnSmarky.classList.add('active-smarky'); btnDenpyo.classList.remove('active-denpyo');
+            secSmarky.classList.add('active'); secDenpyo.classList.remove('active');
+            outputDiv.innerHTML = "";
+        };
+        btnDenpyo.onclick = () => {
+            btnDenpyo.classList.add('active-denpyo'); btnSmarky.classList.remove('active-smarky');
+            secDenpyo.classList.add('active'); secSmarky.classList.remove('active');
+            outputDiv.innerHTML = "";
+        };
+
+        // 安全なセルデータ抽出共通メソッド (0点を維持、空欄は空に)
+        const getSafeVal = (row, idx) => (row && row[idx] !== undefined && row[idx] !== null) ? row[idx] : "";
+
+        // =======================================================
+        // A. Smarkyデータ処理ロジック
+        // =======================================================
+        const dropZoneSmarky = document.getElementById('dropZoneSmarky');
+        const fileInputSmarky = document.getElementById('fileInputSmarky');
+
+        dropZoneSmarky.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneSmarky.style.background = '#e0efff'; });
+        dropZoneSmarky.addEventListener('dragleave', () => { dropZoneSmarky.style.background = '#f0f7ff'; });
+        dropZoneSmarky.addEventListener('drop', (e) => { e.preventDefault(); handleSmarkyFile(e.dataTransfer.files[0]); });
+        fileInputSmarky.addEventListener('change', (e) => handleSmarkyFile(e.target.files[0]));
+
+        function handleSmarkyFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const ws = workbook.Sheets["観点別"];
+                if (!ws) { alert("「観点別」シートが見つかりません。"); return; }
+                const json = XLSX.utils.sheet_to_json(ws, {header: 1});
+                
+                smarkyRows = [];
+                // 6行目(index 5)から開始
+                for (let i = 5; i < json.length; i++) {
+                    if (!json[i] || json[i][0] === undefined) continue;
+                    const currentNum = parseInt(json[i][0]);
+                    const prevNum = smarkyRows.length > 0 ? parseInt(smarkyRows[smarkyRows.length-1][0]) : null;
+
+                    if (prevNum !== null && currentNum > prevNum + 1) {
+                        for (let n = prevNum + 1; n < currentNum; n++) {
+                            smarkyRows.push([n, "", "", ""]);
+                        }
+                    }
+                    smarkyRows.push([json[i][0], getSafeVal(json[i], 1), getSafeVal(json[i], 4), getSafeVal(json[i], 5)]);
+                }
+                document.getElementById('showSmarkyBtn').disabled = false;
+                document.querySelectorAll('.btn-smarky-copy').forEach(btn => btn.disabled = false);
+                alert("Smarkyデータの加工が完了しました！");
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById('showSmarkyBtn').onclick = () => {
+            let html = '<h3>Smarky 加工データプレビュー</h3><table><tr><th>番号</th><th>氏名</th><th>知識・技能</th><th>思考・判断・表現</th></tr>';
+            smarkyRows.forEach(r => html += `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`);
+            outputDiv.innerHTML = html + '</table>';
+        };
+
+        document.querySelectorAll('.btn-smarky-copy').forEach(btn => {
+            btn.onclick = (e) => {
+                const colIdx = parseInt(e.target.getAttribute('data-col'));
+                const text = smarkyRows.map(r => r[colIdx]).join('\n');
+                navigator.clipboard.writeText(text).then(() => alert(`${e.target.textContent} をコピーしました！`));
+            };
+        });
+
+        // =======================================================
+        // B. 成績伝票データ処理ロジック
+        // =======================================================
+        const dropZoneDenpyo = document.getElementById('dropZoneDenpyo');
+        const fileInputDenpyo = document.getElementById('fileInputDenpyo');
+
+        dropZoneDenpyo.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneDenpyo.style.background = '#e2f4e7'; });
+        dropZoneDenpyo.addEventListener('dragleave', () => { dropZoneDenpyo.style.background = '#f4fbf6'; });
+        dropZoneDenpyo.addEventListener('drop', (e) => { e.preventDefault(); handleDenpyoFile(e.dataTransfer.files[0]); });
+        fileInputDenpyo.addEventListener('change', (e) => handleDenpyoFile(e.target.files[0]));
+
+        function handleDenpyoFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const ws = workbook.Sheets["成績伝票印刷"];
+                if (!ws) { alert("「成績伝票印刷」シートが見つかりません。"); return; }
+                const json = XLSX.utils.sheet_to_json(ws, {header: 1});
+                
+                denpyoRows = [];
+                // 13行目(index 12)から開始
+                for (let i = 12; i < json.length; i++) {
+                    if (!json[i]) continue;
+                    const id = json[i][0];
+                    if (id === undefined || id === null || id === "") continue;
+                    if (isNaN(parseInt(id))) continue; // 平均行等の除外
+
+                    denpyoRows.push({
+                        id: id,
+                        name: getSafeVal(json[i], 1),
+                        colD: getSafeVal(json[i], 3),
+                        colEG: [getSafeVal(json[i], 4), getSafeVal(json[i], 5), getSafeVal(json[i], 6)],
+                        colL: getSafeVal(json[i], 11),
+                        colM: getSafeVal(json[i], 12),
+                        colOQ: [getSafeVal(json[i], 14), getSafeVal(json[i], 15), getSafeVal(json[i], 16)],
+                        colV: getSafeVal(json[i], 21),
+                        colWY: [getSafeVal(json[i], 22), getSafeVal(json[i], 23), getSafeVal(json[i], 24)],
+                        colAEAG: [getSafeVal(json[i], 30), getSafeVal(json[i], 31), getSafeVal(json[i], 32)],
+                        colAH: getSafeVal(json[i], 33),
+                        colAO: getSafeVal(json[i], 40),
+                        rawRow: json[i]
+                    });
+                }
+                document.getElementById('showDenpyoBtn').disabled = false;
+                document.querySelectorAll('.btn-denpyo-copy').forEach(btn => btn.disabled = false);
+                alert("成績伝票データの行詰め加工が完了しました！");
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById('showDenpyoBtn').onclick = () => {
+            // ヘッダーとデータ行の順序を「1期末観点」の直後に「仮評定」が来るように調整
+            let html = '<h3>成績伝票 加工データプレビュー</h3><table><tr><th>番号</th><th>氏名</th><th>1期末素点(D)</th><th>1期末観点(E-G)</th><th>仮評定(AO)</th><th>2中間素点(L)</th><th>2期末素点(M)</th><th>2期末観点(O-Q)</th><th>3期末素点(V)</th><th>3期末観点(W-Y)</th><th>学年末観点(AE-AG)</th><th>評定(AH)</th></tr>';
+            denpyoRows.forEach(r => {
+                html += `<tr>
+                    <td>${r.id}</td><td>${r.name}</td><td>${r.colD}</td><td>${r.colEG.join(',')}</td><td>${r.colAO}</td>
+                    <td>${r.colL}</td><td>${r.colM}</td><td>${r.colOQ.join(',')}</td>
+                    <td>${r.colV}</td><td>${r.colWY.join(',')}</td><td>${r.colAEAG.join(',')}</td><td>${r.colAH}</td>
+                </tr>`;
+            });
+            outputDiv.innerHTML = html + '</table>';
+        };
+
+        document.querySelectorAll('.btn-denpyo-copy').forEach(btn => {
+            btn.onclick = (e) => {
+                const target = e.target;
+                const type = target.getAttribute('data-type');
+                let text = "";
+
+                if (type === "single") {
+                    const colIdx = parseInt(target.getAttribute('data-col'));
+                    text = denpyoRows.map(r => getSafeVal(r.rawRow, colIdx)).join('\n');
+                } else {
+                    const colIndices = target.getAttribute('data-cols').split(',').map(Number);
+                    text = denpyoRows.map(r => {
+                        return colIndices.map(idx => getSafeVal(r.rawRow, idx)).join('\t');
+                    }).join('\n');
+                }
+                navigator.clipboard.writeText(text).then(() => alert(`${target.textContent} をコピーしました！`));
+            };
+        });
+    </script>
+</body>
+</html>
