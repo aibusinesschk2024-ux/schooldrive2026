@@ -30,7 +30,7 @@
             color: #0369a1;
             font-size: 16px;
             text-align: left;
-            border-bottom: 2px solid #0ea5e9;
+            border-bottom: 2px solid #e2e8f0;
             padding-bottom: 6px;
             margin-top: 35px;
             margin-bottom: 15px;
@@ -53,6 +53,25 @@
             background: #0284c7; 
             transform: translateY(-1px);
         }
+        
+        /* 3. 画面が広いときだけ2列にする設定（2カラム化） */
+        .button-group {
+           display: grid;
+           gap: 15px;
+           grid-template-columns: 1fr; /* 基本は1列 */
+        }
+        @media (min-width: 768px) {
+        .button-group {
+           grid-template-columns: repeat(2, 1fr); /* iPadなど広い画面では2列 */
+        }
+        }
+
+        /* 4. タップした時に押し込むような反応をつける */
+        .btn:active {
+            transform: translateY(3px) !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -61,27 +80,37 @@
 
         <!-- ① 教務関係 -->
         <h2>📚 教務関係</h2>
-        <a class="btn" style="background: #0284c7;" href="system/sekigae.html">✒️サクッと席替えくん</a>
-        <a class="btn" style="background: #0284c7;" href="system/Grades.html">📔成績表用加工ツール</a>
-        <a class="btn" style="background: #0284c7;" href="system/iPad data search.html">💻タブレットデータ検索くん</a>
+        <div class="button-group">
+        <a class="btn" style="background: #0284c7;" href="system/sekigae.html">✒️　サクッと席替えくん</a>
+        <a class="btn" style="background: #0284c7;" href="system/Grades.html">📔　成績表用加工ツール</a>
+        <a class="btn" style="background: #0284c7;" href="system/iPad data search.html">💻　タブレットデータ検索くん</a>
+        </div>
 
         <!-- ② 電子黒板用 -->
         <h2>🖥️ 電子黒板用</h2>
-        <a class="btn" style="background: #4f46e5;" href="Class Schedule/moshi_schedule.html">📝模試時間割作成</a>
-        <a class="btn" style="background: #4f46e5;" href="Class Schedule/time_keeper.html">⏳タイムキーパー</a>
+        <div class="button-group">
+        <a class="btn" style="background: #4f46e5;" href="Class Schedule/moshi_schedule.html">📝　模試時間割作成</a>
+        <a class="btn" style="background: #4f46e5;" href="Class Schedule/time_keeper.html">⏳　タイムキーパー</a>
+        </div>
 
         <!-- ③ 季節の行事 -->
         <h2>🗓️ 季節の行事</h2>
-        <a class="btn" style="background: #f43f5e;" href="event/Tanabata.html">🎋七夕にお願い</a>
-        <a class="btn" style="background: #f43f5e;" href="event/Christmas_tree.html">🎄クリスマスツリー</a>
+        <div class="button-group">
+        <a class="btn" style="background: #f43f5e;" href="event/Tanabata.html">🎋　七夕にお願い</a>
+        <a class="btn" style="background: #f43f5e;" href="event/Christmas_tree.html">🎄　クリスマスツリー</a>
+        </div>
 
         <!-- ④ 特別支援関係 -->
         <h2>🤝 特別支援関係</h2>
-        <a class="btn" style="background: #f97316;" href="special needs/jiritsu.html">🤸自立活動</a>
+        <div class="button-group">
+        <a class="btn" style="background: #f97316;" href="special needs/jiritsu.html">🤸　自立活動</a>
+        </div>
 
         <!-- ⑤ ダウンロード -->
         <h2>📥 ダウンロード</h2>
+        <div class="button-group">
         <a class="btn" style="background: #10b981;" href="https://github.com/aibusinesschk2024-ux/schooldrive2026/releases" target="_blank">まとめてZIPで保存（先生向け）</a>
+        </div>
 
     </div>
 </body>
