@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タブレットデータ検索くん</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        /* 基本スタイル（画面用） */
+        body {
+            font-family: "Meiryo", "Hiragino Kaku Gothic ProN", sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        /* 左右2カラムのレイアウト用コンテナ */
+        .app-layout {
+            display: flex;
+            flex-direction: row;
+            gap: 25px;
+            width: 100%;
+            max-width: 1000px;
+            align-items: flex-start;
+        }
+
+        /* 左側：使い方ガイド */
+        .guide-sidebar {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 25px;
+            flex: 1;
+            min-width: 280px;
+            border-left: 5px solid #3498db;
+        }
+        .guide-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .guide-step {
+            margin-bottom: 15px;
+        }
+        .guide-step-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #34495e;
+            margin-bottom: 4px;
+        }
+        .guide-step-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .guide-footer {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px dashed #ddd;
+            font-size: 11px;
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+
+        /* 右側：メインコンテンツ */
+        .main-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 30px;
+            flex: 2;
+            min-width: 320px;
+        }
+
+        /* ドラッグ＆ドロップエリア */
+        #drop-zone {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 45px 20px;
+            text-align: center;
+            color: #34495e;
+            background-color: #f0f8ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        #drop-zone.dragover {
+            background-color: #d6eaf8;
+            border-color: #2980b9;
+            transform: scale(1.01);
+        }
+        .drop-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .drop-sub {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        /* 検索フォーム */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+        select:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        /* 印刷カードのスタイル（画面表示用） */
+        #student-card {
+            display: none;
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 25px;
+            background-color: #fff;
+        }
+        .card-header {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .card-row {
+            display: flex;
+            margin-bottom: 12px;
+            font-size: 18px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 8px;
+        }
+        .card-row:last-child {
+            border-bottom: none;
+        }
+        .card-label {
+            width: 140px;
+            font-weight: bold;
+            color: #555;
+        }
+        .card-value {
+            flex: 1;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 20px;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
+        /* ボタン */
+        .btn-print {
+            display: none;
+            width: 100%;
+            padding: 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 25px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+        }
+        .btn-print:hover {
+            background-color: #219150;
+        }
+
+        /* 画面が狭い時（スマホなど）は上下に並べる設定 */
+        @media browser and (max-width: 768px) {
+            .app-layout {
+                flex-direction: column;
+                align-items: stroke;
+            }
+        }
+
+        /* 印刷用スタイル（B5横向き・1ページ集約設定） */
+        @media print {
+            /* 1. カード以外の全要素を「非表示」ではなく「スペースごと完全消去」して2ページ化を防ぐ */
+            body > h1, body > .subtitle, .guide-sidebar, #drop-zone, hr, .form-group, .btn-print {
+                display: none !important;
+            }
+            
+            /* 2. 全体の余白や高さをリセット */
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: #fff;
+                width: 100%;
+                height: auto;
+            }
+
+            .app-layout, .main-container {
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+
+            /* 3. カードをB5横（高さ182mm）の中にゆったり収まるサイズに調整 */
+            #student-card {
+                display: block !important;
+                border: 2px solid #000;
+                box-shadow: none;
+                padding: 20px;
+                margin: 0 auto;
+                box-sizing: border-box;
+                width: 100%;
+                max-height: 100%;
+                page-break-inside: avoid; /* 途中でページが切れるのを禁止 */
+            }
+            .card-header {
+                font-size: 22px;
+                border-bottom: 3px solid #000;
+                margin-bottom: 15px;
+                padding-bottom: 5px;
+            }
+            .card-row {
+                font-size: 18px;
+                margin-bottom: 10px;
+                padding-bottom: 5px;
+            }
+            .card-value {
+                font-size: 20px;
+            }
+            
+            /* 4. 用紙サイズをB5横に指定し、上下左右の印刷余白を調整 */
+            @page {
+                size: B5 landscape;
+                margin: 12mm 15mm; /* 上下12mm、左右15mmの余白で1ページに収める */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>タブレットデータ検索くん</h1>
+    <div class="subtitle">Excelファイルをそのままドロップしてアカウント情報を検索・印刷</div>
+
+    <div class="app-layout">
+        
+        <div class="guide-sidebar">
+            <div class="guide-title">💡 使い方ガイド</div>
+            
+            <div class="guide-step">
+                <div class="guide-step-title">① エクセルの読み込み</div>
+                <p class="guide-step-desc">「タブレットマスターデータ」のExcelファイルを、右側の青枠エリアにドラッグ＆ドロップ（またはクリックして選択）します。</p>
+            </div>
+            
+            <div class="guide-step">
+                <div class="guide-step-title">② クラスを選択</div>
+                <p class="guide-step-desc">データが正常に読み込まれたら、ドロップダウンから目的のクラスを選択します。</p>
+            </div>
+            
+            <div class="guide-step">
+                <div class="guide-step-title">③ 氏名を選択</div>
+                <p class="guide-step-desc">選択したクラス内の生徒一覧が表示されるので、対象の生徒を選択します。アカウント情報がカード形式で表示されます。</p>
+            </div>
+            
+            <div class="guide-step">
+                <div class="guide-step-title">④ 印刷して配布</div>
+                <p class="guide-step-desc">「この情報を印刷して渡す」ボタンを押すと、印刷画面が開きます。自動的にB5横向き・1ページに収まるよう設定されていますので、そのまま印刷（またはPDF保存）して生徒に手渡せます。</p>
+            </div>
+
+            <div class="guide-footer">
+                ⚠️ <strong>安心・安全：</strong><br>読み込んだ生徒データは、お使いのパソコン内（ブラウザ上）だけで処理されます。外部のサーバー等に送信されることは一切ありません。
+            </div>
+        </div>
+
+        <div class="main-container">
+            <div id="drop-zone">
+                <div class="drop-title">ここにExcelファイル（.xlsx）をドラッグ＆ドロップ</div>
+                <div class="drop-sub">または ここをクリックしてファイルを選択</div>
+                <input type="file" id="file-input" accept=".xlsx, .xls" style="display: none;">
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+
+            <div class="form-group">
+                <label for="class-select">1. クラスを選択</label>
+                <select id="class-select" disabled>
+                    <option value="">先にExcelデータを読み込んでください</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="name-select">2. 氏名を選択</label>
+                <select id="name-select" disabled>
+                    <option value="">クラスを先に選択してください</option>
+                </select>
+            </div>
+
+            <div id="student-card">
+                <div class="card-header">Google Classroom アカウント情報</div>
+                
+                <div class="card-row">
+                    <div class="card-label">所属・氏名:</div>
+                    <div class="card-value" id="card-class-name"></div>
+                </div>
+                
+                <div class="card-row">
+                    <div class="card-label">アカウント:</div>
+                    <div class="card-value" id="card-account"></div>
+                </div>
+
+                <div class="card-row">
+                    <div class="card-label">パスワード:</div>
+                    <div class="card-value" id="card-password"></div>
+                </div>
+
+                <div class="card-row">
+                    <div class="card-label">クラスコード:</div>
+                    <div class="card-value" id="card-classcode"></div>
+                </div>
+            </div>
+
+            <button class="btn-print" id="btn-print" onclick="window.print()">この情報を印刷して渡す</button>
+        </div>
+
+    </div>
+
+    <script>
+        let masterData = [];
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const classSelect = document.getElementById('class-select');
+        const nameSelect = document.getElementById('name-select');
+        const studentCard = document.getElementById('student-card');
+        const btnPrint = document.getElementById('btn-print');
+
+        // ドラッグ＆ドロップのイベント設定
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        });
+
+        // クリックしてファイル選択した場合のイベント設定
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFile(file);
+        });
+
+        // ファイルの読み込みと解析処理
+        function handleFile(file) {
+            if (!file) return;
+
+            const fileName = file.name;
+            const extension = fileName.split('.').pop().toLowerCase();
+            if (extension !== 'xlsx' && extension !== 'xls') {
+                alert('Excelファイル（.xlsx または .xls）をドロップしてください。');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                
+                parseExcelRows(rows, fileName);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 行データの解析
+        function parseExcelRows(rows, fileName) {
+            masterData = [];
+            let loadedCount = 0;
+
+            for (let i = 0; i < rows.length; i++) {
+                const cols = rows[i];
+                if (!cols || cols.length === 0) continue;
+
+                // B列(1):クラス, C列(2):出席番号, D列(3):氏名
+                // K列(10):アカウント, L列(11):パスワード, M列(12):クラスコード
+                const className = cols[1] ? String(cols[1]).trim() : "";
+                
+                if (className === "クラス" || className === "") continue;
+
+                masterData.push({
+                    className: className,
+                    number: cols[2] ? String(cols[2]).trim() : "",
+                    name: cols[3] ? String(cols[3]).trim() : "",
+                    account: cols[10] ? String(cols[10]).trim() : "",
+                    password: cols[11] ? String(cols[11]).trim() : "",
+                    classCode: cols[12] ? String(cols[12]).trim() : ""
+                });
+                loadedCount++;
+            }
+
+            if (loadedCount > 0) {
+                dropZone.innerHTML = `
+                    <div class="drop-title" style="color: #27ae60;">✓ 読み込み成功！</div>
+                    <div class="drop-sub" style="color: #27ae60;">「${fileName}」から ${loadedCount} 名のデータを登録しました</div>
+                `;
+                dropZone.style.backgroundColor = "#e8f8f5";
+                dropZone.style.borderColor = "#2ecc71";
+                
+                setupClassSelect();
+            } else {
+                alert('有効な生徒データが見つかりませんでした。列の配置を確認してください。');
+            }
+        }
+
+        // クラスのドロップダウンを構築
+        function setupClassSelect() {
+            const classes = [...new Set(masterData.map(d => d.className))];
+            
+            classSelect.innerHTML = '<option value="">選択してください</option>';
+            classes.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c;
+                option.textContent = c;
+                classSelect.appendChild(option);
+            });
+
+            classSelect.disabled = false;
+            nameSelect.innerHTML = '<option value="">クラスを先に選択してください</option>';
+            nameSelect.disabled = true;
+            
+            studentCard.style.display = 'none';
+            btnPrint.style.display = 'none';
+        }
+
+        // クラスが選択されたときの処理（氏名のドロップダウンを連動）
+        classSelect.addEventListener('change', () => {
+            const selectedClass = classSelect.value;
+            if (!selectedClass) {
+                nameSelect.innerHTML = '<option value="">クラスを先に選択してください</option>';
+                nameSelect.disabled = true;
+                studentCard.style.display = 'none';
+                btnPrint.style.display = 'none';
+                return;
+            }
+
+            const studentsInClass = masterData
+                .filter(d => d.className === selectedClass)
+                .sort((a, b) => Number(a.number) - Number(b.number));
+            
+            nameSelect.innerHTML = '<option value="">氏名を選択してください</option>';
+            studentsInClass.forEach(s => {
+                const option = document.createElement('option');
+                option.value = `${s.className}_${s.name}`; 
+                option.textContent = `${s.name} （${s.number}番）`;
+                nameSelect.appendChild(option);
+            });
+
+            nameSelect.disabled = false;
+            studentCard.style.display = 'none';
+            btnPrint.style.display = 'none';
+        });
+
+        // 氏名が選択されたときの処理（カードに表示）
+        nameSelect.addEventListener('change', () => {
+            const selectedValue = nameSelect.value;
+            if (!selectedValue) {
+                studentCard.style.display = 'none';
+                btnPrint.style.display = 'none';
+                return;
+            }
+
+            const [selectedClass, selectedName] = selectedValue.split('_');
+            const student = masterData.find(d => d.className === selectedClass && d.name === selectedName);
+
+            if (student) {
+                document.getElementById('card-class-name').textContent = `${student.className} ／ ${student.name}`;
+                document.getElementById('card-account').textContent = student.account;
+                document.getElementById('card-password').textContent = student.password;
+                document.getElementById('card-classcode').textContent = student.classCode;
+
+                studentCard.style.display = 'block';
+                btnPrint.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
