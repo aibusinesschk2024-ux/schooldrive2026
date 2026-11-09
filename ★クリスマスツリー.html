@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Christmas Wish Forest</title>
+  <style>
+    /* ＝＝＝ 全体・背景（幻想的なグラデーション） ＝＝＝ */
+    body {
+      margin: 0; padding: 0; height: 100vh; overflow: hidden;
+      background: linear-gradient(to bottom, #060b26 0%, #122554 40%, #1c528f 80%, #2074ba 100%);
+      color: #fff; font-family: 'Helvetica Neue', Arial, sans-serif;
+      display: flex; flex-direction: column; position: relative;
+    }
+
+    /* ＝＝＝ 背景パーツ（星、月、光のボケなど） ＝＝＝ */
+    .stars-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+      background-image: 
+        radial-gradient(1px 1px at 10% 20%, #fff, rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 30% 40%, #fff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 80% 10%, #fff, rgba(0,0,0,0)),
+        radial-gradient(1px 1px at 60% 80%, #fff, rgba(0,0,0,0));
+      background-size: 150px 150px; opacity: 0.6;
+    }
+    .cross-star {
+      position: absolute; background: #fff; border-radius: 50%;
+      box-shadow: 0 0 10px 2px rgba(255,255,255,0.8); z-index: 1;
+    }
+    .cross-star::before, .cross-star::after {
+      content: ''; position: absolute; background: #fff;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      box-shadow: 0 0 8px rgba(255,255,255,0.8);
+    }
+    .cross-star::before { width: 400%; height: 2px; border-radius: 50%; }
+    .cross-star::after { width: 2px; height: 400%; border-radius: 50%; }
+    
+    .orb { position: absolute; border-radius: 50%; filter: blur(25px); opacity: 0.4; z-index: 1; }
+    .orb-1 { width: 150px; height: 150px; background: #b388ff; top: 50%; left: 15%; }
+    .orb-2 { width: 100px; height: 100px; background: #82b1ff; top: 70%; right: 25%; }
+    .orb-3 { width: 200px; height: 200px; background: #ff8a80; top: 20%; right: 10%; opacity: 0.2; }
+    .orb-4 { width: 120px; height: 120px; background: #8c9eff; top: 40%; left: 35%; opacity: 0.3; }
+
+    /* 月 */
+    .moon {
+      position: absolute; top: 12%; left: 70%; transform: translateX(-50%);
+      width: clamp(120px, 18vw, 250px); aspect-ratio: 1/1;
+      background: radial-gradient(circle at 40% 40%, #ffffff 40%, #f4f6f9 80%, #e0e5ec 100%);
+      border-radius: 50%; z-index: 1;
+      box-shadow: 0 0 80px 20px rgba(255, 255, 255, 0.4), 0 0 20px 10px rgba(255, 255, 255, 0.6), inset -15px -15px 30px rgba(0,0,0,0.1);
+    }
+
+    /* 白い冬の木々（背景） */
+    .white-trees {
+      position: absolute; bottom: 8vh; width: 100%; height: 200px; z-index: 3; pointer-events: none; opacity: 0.85;
+    }
+    
+    /* 地面（雪原） */
+    .ground-back {
+      position: absolute; bottom: -5vh; left: -10vw; width: 60vw; height: 20vh;
+      background: #eef5ff; border-radius: 50%; opacity: 0.9; z-index: 4;
+    }
+    .ground-front {
+      position: absolute; bottom: -10vh; right: -5vw; width: 70vw; height: 25vh;
+      background: #ffffff; border-radius: 50%; z-index: 5; box-shadow: inset 0 20px 30px #d4e0ec;
+    }
+
+    /* ＝＝＝ UI要素 ＝＝＝ */
+    #countdown {
+      position: absolute; top: 20px; left: 30px;
+      font-size: clamp(20px, 2.5vw, 36px); font-weight: bold;
+      text-shadow: 0 3px 6px rgba(0,0,0,0.8); z-index: 100;
+    }
+    .days-left {
+      color: #ff3b3b; font-size: 1.8em; text-shadow: 0 0 15px rgba(255, 59, 59, 0.8);
+      margin: 0 5px; display: inline-block; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+    /* 右上コントロールボタン */
+    #top-right-controls {
+      position: absolute; top: 20px; right: 30px; z-index: 100;
+      display: flex; gap: 10px; align-items: center;
+    }
+    .control-btn {
+      background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5);
+      color: #fff; padding: 10px 15px; border-radius: 25px; cursor: pointer;
+      backdrop-filter: blur(5px); font-size: clamp(14px, 1.5vw, 20px); transition: all 0.3s;
+    }
+    .control-btn:hover { background: rgba(255, 255, 255, 0.3); }
+    .icon-btn { padding: 10px; border-radius: 50%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; }
+
+    /* ＝＝＝ 森 (前面の緑ツリー) ＝＝＝ */
+    #forest-container {
+      flex: 1; position: relative; width: 100%; display: flex; justify-content: center; align-items: flex-end;
+      padding-bottom: 2vh; z-index: 10; gap: clamp(10px, 3vw, 40px); transition: all 0.8s ease-in-out;
+    }
+    .tree-wrapper { position: relative; aspect-ratio: 3 / 4; transition: all 0.8s ease-in-out; }
+    #main-tree { height: 62vh; max-width: 45vw; }
+    .sub-tree { height: 42vh; max-width: 22vw; opacity: 1; transition: opacity 0.5s, max-width 0.5s; }
+    .sub-tree.hidden { max-width: 0vw; opacity: 0; margin: 0; overflow: hidden; pointer-events: none; }
+    .svg-tree { width: 100%; height: 100%; display: block; filter: drop-shadow(0px 15px 12px rgba(0,0,0,0.6)); }
+
+    /* ＝＝＝ オーナメント ＝＝＝ */
+    .ornament {
+      position: absolute; font-size: clamp(24px, 4vh, 45px); 
+      transform: translate(-50%, -50%); cursor: pointer; z-index: 20;
+      filter: drop-shadow(0px 6px 6px rgba(0,0,0,0.5));
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); transition: transform 0.2s;
+    }
+    .ornament:hover { transform: translate(-50%, -50%) scale(1.3); z-index: 30; }
+    @keyframes popIn { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+    /* キラキラエフェクト */
+    .sparkle-effect { position: absolute; transform: translate(-50%, -50%); width: 0; height: 0; z-index: 19; pointer-events: none; }
+    .sparkle-ring {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      border: 4px solid #fff; border-radius: 50%; animation: explodeRing 0.8s ease-out forwards;
+    }
+    @keyframes explodeRing { 0% { width: 0; height: 0; opacity: 1; border-width: 6px; } 100% { width: clamp(80px, 12vh, 150px); height: clamp(80px, 12vh, 150px); opacity: 0; border-width: 1px; } }
+    .sparkle-star {
+      position: absolute; top: 50%; left: 50%; width: clamp(3px, 0.5vh, 6px); height: clamp(15px, 2vh, 30px);
+      background: #ffeb3b; border-radius: 50%; transform-origin: center clamp(30px, 5vh, 60px); animation: shootStar 0.8s ease-out forwards;
+    }
+    @keyframes shootStar { 0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--deg)) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--deg)) scale(0); } }
+
+    /* ＝＝＝ 入力エリア ＝＝＝ */
+    #input-area-wrapper {
+      background: rgba(20, 30, 50, 0.85); backdrop-filter: blur(15px); padding: 2vh 2vw; 
+      border-top: 1px solid rgba(255, 255, 255, 0.2); z-index: 100;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    #input-area { display: flex; gap: 15px; justify-content: center; width: 100%; }
+    input[type="text"] { padding: 15px; border: none; border-radius: 8px; font-size: clamp(16px, 1.5vw, 24px); outline: none; }
+    #name-input { width: clamp(100px, 10vw, 200px); }
+    #wish-input { flex: 1; max-width: 600px; }
+    button.submit-btn {
+      padding: 15px 30px; border: none; border-radius: 8px; background-color: #d32f2f; color: white;
+      font-weight: bold; cursor: pointer; font-size: clamp(16px, 1.5vw, 24px); box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+    button.submit-btn:hover { background-color: #b71c1c; }
+    
+    #over-limit-warning { color: #ffeb3b; font-size: 14px; display: none; font-weight: bold; text-shadow: 0 0 5px #000; }
+
+    /* ＝＝＝ 神出鬼没なサンタ ＝＝＝ */
+    #santa-sleigh {
+      position: absolute; z-index: 5; width: clamp(150px, 15vw, 300px); opacity: 0; pointer-events: none;
+    }
+    .fly-animation { animation: stealthFly 15s linear forwards; }
+    @keyframes stealthFly { 
+      0% { transform: translate(var(--start-x), var(--start-y)) scaleX(var(--flip)); opacity: 0; } 
+      20% { opacity: 0.35; } 80% { opacity: 0.35; }
+      100% { transform: translate(var(--end-x), var(--end-y)) scaleX(var(--flip)); opacity: 0; } 
+    }
+
+    /* ＝＝＝ 降雪 ＝＝＝ */
+    .snowflake { position: absolute; top: -10px; background: #fff; border-radius: 50%; pointer-events: none; z-index: 25; box-shadow: 0 0 5px #fff; }
+    @keyframes sway { 0% { transform: translateX(0px); } 100% { transform: translateX(3vw); } }
+
+    /* ＝＝＝ モーダル（カード＆設定） ＝＝＝ */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8); z-index: 200; justify-content: center; align-items: center;
+    }
+    .close-btn { position: absolute; top: 10px; right: 20px; font-size: 36px; cursor: pointer; color: #555; z-index: 10; font-weight: bold; text-shadow: 0 0 5px #fff;}
+    
+    /* 🌲 個別削除用のゴミ箱ボタン (カード左上) */
+    .modal-delete-btn { position: absolute; top: 15px; left: 20px; font-size: 28px; cursor: pointer; z-index: 10; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); transition: transform 0.2s;}
+    .modal-delete-btn:hover { transform: scale(1.2); }
+
+    .card-modal {
+      background-color: #e5d8b8; background-image: repeating-linear-gradient(transparent, transparent 38px, #fff 38px, #fff 40px);
+      border: 8px solid #b7191f; border-radius: 0; width: 85%; max-width: 650px; padding: 60px 40px 40px; position: relative; overflow: hidden;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.8); color: #3e2723; text-align: center;
+    }
+    .card-modal::before { content: ''; position: absolute; top: -50px; left: -50px; width: 100px; height: 100px; background: #0e5b32; transform: rotate(45deg); border: 2px solid #fff; }
+    .card-modal::after { content: ''; position: absolute; bottom: -50px; right: -50px; width: 100px; height: 100px; background: #0e5b32; transform: rotate(45deg); border: 2px solid #fff; }
+    .card-title { font-family: 'Comic Sans MS', 'Arial', sans-serif; font-size: 32px; font-weight: bold; color: #b7191f; margin-top: -30px; margin-bottom: 30px; text-shadow: 2px 2px 0px #fff; }
+    .modal-wish { font-size: clamp(20px, 2.5vw, 32px); font-weight: bold; line-height: 40px; margin-bottom: 30px; word-break: break-all; }
+    .modal-name { font-size: clamp(18px, 1.5vw, 24px); text-align: right; font-weight: bold; border-top: 2px dashed #b7191f; padding-top: 15px; }
+    .card-deco { position: absolute; font-size: 35px; user-select: none; }
+    .deco-1 { top: 15px; left: 60px; } .deco-2 { top: 15px; right: 60px; } .deco-3 { bottom: 15px; left: 40px; } .deco-4 { bottom: 60px; right: 20px; }
+
+    .admin-panel { background: #fff; border-radius: 20px; padding: 40px; max-width: 450px; text-align: left; position: relative; color: #333; }
+    .admin-panel h2 { margin-top: 0; text-align: center; color: #d32f2f; }
+    .admin-group { margin-bottom: 20px; }
+    .admin-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 16px; }
+    .admin-group input { width: 100%; padding: 10px; box-sizing: border-box; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; }
+    .admin-btn-group { display: flex; gap: 10px; justify-content: space-between; }
+    .admin-btn { flex: 1; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; color: #fff; }
+    .btn-blue { background-color: #1976d2; } .btn-green { background-color: #2e7d32; }
+  </style>
+</head>
+<body>
+
+  <!-- 🎵 BGM設定箇所 🎵 
+       ループ設定をプログラム管理にするため、ここでは<audio>タグを置くだけにしています -->
+  <audio id="bgm"></audio>
+
+  <!-- 背景パーツ群 -->
+  <div class="stars-layer"></div>
+  <div class="cross-star" style="top: 15%; left: 20%; width: 8px; height: 8px;"></div>
+  <div class="cross-star" style="top: 10%; right: 25%; width: 6px; height: 6px;"></div>
+  <div class="cross-star" style="top: 35%; right: 10%; width: 10px; height: 10px;"></div>
+  <div class="cross-star" style="top: 45%; left: 10%; width: 5px; height: 5px;"></div>
+  <div class="cross-star" style="top: 60%; right: 30%; width: 7px; height: 7px;"></div>
+  <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div><div class="orb orb-4"></div>
+  <div class="moon"></div>
+  <div class="white-trees">
+    <svg viewBox="0 0 200 200" style="position: absolute; left: 5%; bottom: 0; height: 150%; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));"><path d="M100,200 L100,50 M100,160 L70,110 M100,140 L130,80 M100,100 L80,50 M70,110 L80,70 M130,80 L140,50" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M85,135 L60,130 M115,110 L140,115 M90,75 L65,65 M115,65 L130,55" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <svg viewBox="0 0 200 200" style="position: absolute; left: -2%; bottom: -10%; height: 100%; opacity: 0.6;"><path d="M100,200 L100,50 M100,160 L70,110 M100,140 L130,80" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+    <svg viewBox="0 0 200 200" style="position: absolute; right: 2%; bottom: 0; height: 130%; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));"><path d="M100,200 L100,60 M100,170 L130,120 M100,150 L70,90 M100,110 L120,60 M130,120 L120,80 M70,90 L60,60" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M115,145 L140,140 M85,120 L60,125 M110,85 L135,75" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <svg viewBox="0 0 200 200" style="position: absolute; right: 10%; bottom: -5%; height: 110%; opacity: 0.7;"><path d="M100,200 L100,50 M100,160 L70,110 M100,140 L130,80" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
+  </div>
+  <div class="ground-back"></div><div class="ground-front"></div>
+
+  <!--UIボタン群-->
+  <div id="top-right-controls">
+    <button id="single-tree-btn" class="control-btn" onclick="toggleSingleModeManual()" title="人数が少ない場合用">🌲 中央のみに切替 (最大34個)</button>
+    <button id="undo-btn" class="control-btn icon-btn" title="元に戻す" onclick="undoLastAction()">↩️</button>
+    <button id="trash-btn" class="control-btn icon-btn" title="全削除" onclick="deleteAllWishes()">🗑️</button>
+    <button id="debug-btn" class="control-btn icon-btn" title="管理者設定">⚙️</button>
+    <button id="bgm-btn" class="control-btn icon-btn" title="BGM切替">🔇</button>
+  </div>
+  
+  <div id="countdown">クリスマスまであと<span class="days-left" id="days-left">--</span>日！</div>
+
+  <div id="santa-sleigh">
+    <svg viewBox="0 0 700 250" width="100%" height="100%">
+      <g fill="#9ba4b5" stroke-linejoin="round" opacity="0.9">
+        <path d="M 40 180 Q 20 180 20 160 M 20 160 Q 20 150 40 150 L 160 150 Q 180 150 180 130" fill="none" stroke="#9ba4b5" stroke-width="4"/>
+        <path d="M 60 180 L 60 150 M 100 180 L 100 150 M 140 180 L 140 150" stroke="#9ba4b5" stroke-width="4"/><path d="M 45 150 L 155 150 L 165 110 L 150 110 L 130 110 L 80 110 Z" />
+        <circle cx="70" cy="110" r="30" /><circle cx="110" cy="100" r="18" /><circle cx="125" cy="80" r="12" /><path d="M 125 70 Q 115 60 100 80 Z" />
+        <path d="M 140 120 Q 250 140 380 90" fill="none" stroke="#9ba4b5" stroke-width="2"/><path d="M 140 120 Q 400 160 580 70" fill="none" stroke="#9ba4b5" stroke-width="2"/>
+        <defs>
+          <g id="deer"><path d="M 20 50 Q 40 35 60 45 L 80 30 Q 90 25 95 35 Q 100 45 90 55 L 75 75 L 70 65 L 45 65 Q 40 85 30 100 L 20 100 L 25 80 L 5 80 L 0 70 L 15 65 Z"/><path d="M 75 35 Q 65 10 85 5 M 80 25 Q 95 10 105 15" fill="none" stroke="#9ba4b5" stroke-width="3" stroke-linecap="round"/></g>
+        </defs>
+        <use href="#deer" x="200" y="50" transform="scale(0.9)" /><use href="#deer" x="380" y="20" transform="scale(0.9)" /><use href="#deer" x="550" y="-10" transform="scale(0.9)" />
+      </g>
+    </svg>
+  </div>
+
+  <div id="forest-container">
+    <div class="tree-wrapper sub-tree" id="tree-left">
+      <svg class="svg-tree" viewBox="0 0 300 400" preserveAspectRatio="xMidYMax meet"><use href="#tree-def"></use></svg>
+    </div>
+    <div class="tree-wrapper" id="main-tree">
+      <svg class="svg-tree" viewBox="0 0 300 400" preserveAspectRatio="xMidYMax meet">
+        <defs>
+          <g id="tree-def">
+            <rect x="130" y="330" width="40" height="70" fill="#654321" rx="5"/>
+            <path d="M150,20 C140,70 100,90 100,90 C120,90 130,95 130,95 C100,160 60,180 60,180 C90,180 110,185 110,185 C70,260 20,290 20,290 C90,300 150,330 150,330 C150,330 210,300 280,290 C280,290 230,260 190,185 C190,185 210,180 240,180 C240,180 200,160 170,95 C170,95 180,90 200,90 C200,90 160,70 150,20 Z" fill="#1b7a39" stroke="#0f5223" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M110,95 Q150,120 180,105 M80,185 Q150,230 220,185 M40,290 Q150,350 260,290" fill="none" stroke="#ffd700" stroke-width="6" stroke-dasharray="0 12" stroke-linecap="round"/>
+            <polygon points="150,5 155,18 168,18 158,26 161,39 150,32 139,39 142,26 132,18 145,18" fill="#ffd700"/>
+          </g>
+        </defs>
+        <use href="#tree-def"></use>
+      </svg>
+    </div>
+    <div class="tree-wrapper sub-tree" id="tree-right">
+      <svg class="svg-tree" viewBox="0 0 300 400" preserveAspectRatio="xMidYMax meet"><use href="#tree-def"></use></svg>
+    </div>
+  </div>
+
+  <div id="input-area-wrapper">
+    <div id="input-area">
+      <input type="text" id="name-input" placeholder="名前">
+      <input type="text" id="wish-input" placeholder="願い事...">
+      <button class="submit-btn" onclick="handleManualSubmit()">飾る ❄️</button>
+    </div>
+    <span id="over-limit-warning">※想定MAX数を超えるため、少し重なって表示されます</span>
+  </div>
+
+  <!-- クリスマスカード風 モーダル (個別削除ボタン付き) -->
+  <div id="modal" class="modal-overlay">
+    <div class="card-modal">
+      <div class="modal-delete-btn" onclick="deleteCurrentWish()" title="この願い事を削除">🗑️</div>
+      <span class="close-btn" onclick="closeModal('modal')">&times;</span>
+      <div class="card-deco deco-1">⛄</div><div class="card-deco deco-2">🔔</div>
+      <div class="card-deco deco-3">🧦</div><div class="card-deco deco-4">🎄</div>
+      <div class="card-title">Merry Christmas!</div>
+      <div class="modal-wish" id="modal-wish-text"></div>
+      <div class="modal-name" id="modal-name-text"></div>
+    </div>
+  </div>
+
+  <!-- 管理者用設定パネルモーダル -->
+  <div id="admin-modal" class="modal-overlay">
+    <div class="admin-panel">
+      <span class="close-btn" onclick="closeModal('admin-modal')">&times;</span>
+      <h2>⚙️ 管理者設定パネル</h2>
+      <div class="admin-group"><label>メインツリーに飾られる確率 (%)</label><input type="number" id="prob-input" min="0" max="100" value="60"></div>
+      <div class="admin-group"><label>サンタ出現間隔 (分)</label><input type="number" id="santa-interval-input" min="1" value="3"></div>
+      <div class="admin-group"><label>デバッグ生成数 (一気に飾るテスト)</label><input type="number" id="debug-count-input" min="1" max="100" value="35"></div>
+      <div class="admin-btn-group">
+        <button class="admin-btn btn-blue" onclick="saveAdminSettings()">設定を保存</button>
+        <button class="admin-btn btn-green" onclick="runDebugGeneration()">指定数テスト生成</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 【対策A】誤タップ・リロード防止の警告ストッパー ---
+    window.addEventListener('beforeunload', function (e) {
+      if (wishesData.length > 0) {
+        e.preventDefault();
+        e.returnValue = '入力された願い事がありますが、ページから移動しますか？';
+      }
+    });
+
+    // --- カウントダウン ---
+    function updateCountdown() {
+      try {
+        const now = new Date();
+        let targetDate = new Date(now.getFullYear(), 11, 24);
+        if (now.getTime() > targetDate.getTime() && now.getDate() !== 24) {
+          targetDate = new Date(now.getFullYear() + 1, 11, 24);
+        }
+        const diffTime = targetDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const el = document.getElementById('days-left');
+        if (el) el.innerText = (diffDays === 0) ? "0(当日)" : diffDays;
+      } catch (error) {
+        console.error("Countdown Error: ", error);
+      }
+    }
+    updateCountdown();
+    document.addEventListener("DOMContentLoaded", updateCountdown);
+
+
+    // --- グローバル変数・セーブデータ管理 ---
+    let mainTreeProbability = 60;
+    let santaIntervalMinutes = 3;
+    let santaTimer = null;
+    let isSingleTreeMode = false;
+    let isOverflowMode = false;
+    
+    let wishesData = []; 
+    let currentOpenWishId = null;
+    let undoStack = [];
+
+    // --- 固定スロットの定義 ---
+    const mainTreeSlots = [
+      {id: 'm1', x: 50, y: 20}, {id: 'm2', x: 43, y: 28}, {id: 'm3', x: 57, y: 28}, {id: 'm4', x: 38, y: 36}, {id: 'm5', x: 50, y: 36}, {id: 'm6', x: 62, y: 36},
+      {id: 'm7', x: 32, y: 44}, {id: 'm8', x: 44, y: 44}, {id: 'm9', x: 56, y: 44}, {id: 'm10', x: 68, y: 44}, {id: 'm11', x: 27, y: 52}, {id: 'm12', x: 40, y: 52}, 
+      {id: 'm13', x: 50, y: 52}, {id: 'm14', x: 60, y: 52}, {id: 'm15', x: 73, y: 52}, {id: 'm16', x: 23, y: 60}, {id: 'm17', x: 35, y: 60}, {id: 'm18', x: 47, y: 60}, 
+      {id: 'm19', x: 53, y: 60}, {id: 'm20', x: 65, y: 60}, {id: 'm21', x: 77, y: 60}, {id: 'm22', x: 18, y: 68}, {id: 'm23', x: 30, y: 68}, {id: 'm24', x: 42, y: 68}, 
+      {id: 'm25', x: 58, y: 68}, {id: 'm26', x: 70, y: 68}, {id: 'm27', x: 82, y: 68}, {id: 'm28', x: 14, y: 76}, {id: 'm29', x: 25, y: 76}, {id: 'm30', x: 38, y: 76}, 
+      {id: 'm31', x: 50, y: 76}, {id: 'm32', x: 62, y: 76}, {id: 'm33', x: 75, y: 76}, {id: 'm34', x: 86, y: 76}
+    ];
+    const subTreeSlotsLeft = [
+      {id: 'l1', x: 50, y: 22}, {id: 'l2', x: 42, y: 32}, {id: 'l3', x: 58, y: 32}, {id: 'l4', x: 35, y: 42}, {id: 'l5', x: 50, y: 42}, {id: 'l6', x: 65, y: 42},
+      {id: 'l7', x: 28, y: 52}, {id: 'l8', x: 43, y: 52}, {id: 'l9', x: 57, y: 52}, {id: 'l10', x: 72, y: 52}, {id: 'l11', x: 22, y: 62}, {id: 'l12', x: 36, y: 62}, 
+      {id: 'l13', x: 50, y: 62}, {id: 'l14', x: 64, y: 62}, {id: 'l15', x: 78, y: 62}, {id: 'l16', x: 15, y: 72}, {id: 'l17', x: 30, y: 72}, {id: 'l18', x: 45, y: 72}, 
+      {id: 'l19', x: 55, y: 72}, {id: 'l20', x: 70, y: 72}, {id: 'l21', x: 85, y: 72}
+    ];
+    const subTreeSlotsRight = [
+      {id: 'r1', x: 50, y: 22}, {id: 'r2', x: 42, y: 32}, {id: 'r3', x: 58, y: 32}, {id: 'r4', x: 35, y: 42}, {id: 'r5', x: 50, y: 42}, {id: 'r6', x: 65, y: 42},
+      {id: 'r7', x: 28, y: 52}, {id: 'r8', x: 43, y: 52}, {id: 'r9', x: 57, y: 52}, {id: 'r10', x: 72, y: 52}, {id: 'r11', x: 22, y: 62}, {id: 'r12', x: 36, y: 62}, 
+      {id: 'r13', x: 50, y: 62}, {id: 'r14', x: 64, y: 62}, {id: 'r15', x: 78, y: 62}, {id: 'r16', x: 15, y: 72}, {id: 'r17', x: 30, y: 72}, {id: 'r18', x: 45, y: 72}, 
+      {id: 'r19', x: 55, y: 72}, {id: 'r20', x: 70, y: 72}, {id: 'r21', x: 85, y: 72}
+    ];
+    let availableSlots = [];
+
+    // --- 自動保存（LocalStorage）機能 ---
+    function saveWishesToStorage() {
+      localStorage.setItem('christmasWishesForest', JSON.stringify(wishesData));
+    }
+    
+    function loadWishesFromStorage() {
+      const saved = localStorage.getItem('christmasWishesForest');
+      if (saved) {
+        wishesData = JSON.parse(saved);
+        if (wishesData.length > 34 && isSingleTreeMode) isSingleTreeMode = false;
+        updateTreeUI();
+        initializeSlots(); 
+        
+        wishesData.forEach(w => {
+          if (!w.isOverflow) availableSlots = availableSlots.filter(s => s.id !== w.slotId);
+          renderOrnamentDOM(w);
+        });
+        checkOverflowStatus();
+      } else {
+        updateTreeUI();
+        initializeSlots();
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadWishesFromStorage);
+
+    function initializeSlots() {
+      availableSlots = [];
+      mainTreeSlots.forEach(s => availableSlots.push({ id: s.id, treeId: 'main-tree', x: s.x, y: s.y }));
+      if (!isSingleTreeMode) {
+        subTreeSlotsLeft.forEach(s => availableSlots.push({ id: s.id, treeId: 'tree-left', x: s.x, y: s.y }));
+        subTreeSlotsRight.forEach(s => availableSlots.push({ id: s.id, treeId: 'tree-right', x: s.x, y: s.y }));
+      }
+      shuffleArray(availableSlots);
+    }
+
+    function expandToThreeTrees() {
+      isSingleTreeMode = false;
+      updateTreeUI();
+      const usedLeftSlots = wishesData.filter(w => w.treeId === 'tree-left' && !w.isOverflow).map(w => w.slotId);
+      const usedRightSlots = wishesData.filter(w => w.treeId === 'tree-right' && !w.isOverflow).map(w => w.slotId);
+
+      subTreeSlotsLeft.forEach(s => {
+        if (!usedLeftSlots.includes(s.id)) availableSlots.push({ id: s.id, treeId: 'tree-left', x: s.x, y: s.y });
+      });
+      subTreeSlotsRight.forEach(s => {
+        if (!usedRightSlots.includes(s.id)) availableSlots.push({ id: s.id, treeId: 'tree-right', x: s.x, y: s.y });
+      });
+      shuffleArray(availableSlots);
+    }
+
+    function pickRandomSlot() {
+      if (availableSlots.length === 0) {
+        if (isSingleTreeMode) { expandToThreeTrees(); } 
+        else {
+          isOverflowMode = true; checkOverflowStatus(); initializeSlots(); 
+        }
+      }
+
+      const availMain = availableSlots.filter(s => s.treeId === 'main-tree');
+      const availLeft = availableSlots.filter(s => s.treeId === 'tree-left');
+      const availRight = availableSlots.filter(s => s.treeId === 'tree-right');
+      let targetTree = 'main-tree';
+      let r = Math.random() * 100;
+      
+      if (!isSingleTreeMode) {
+        if (r < mainTreeProbability && availMain.length > 0) targetTree = 'main-tree';
+        else if (r < mainTreeProbability + (100 - mainTreeProbability) / 2 && availLeft.length > 0) targetTree = 'tree-left';
+        else if (availRight.length > 0) targetTree = 'tree-right';
+        else {
+          if (availMain.length > 0) targetTree = 'main-tree';
+          else if (availLeft.length > 0) targetTree = 'tree-left';
+          else targetTree = 'tree-right';
+        }
+      }
+
+      const targetSlots = availableSlots.filter(s => s.treeId === targetTree);
+      const pickedIndex = Math.floor(Math.random() * targetSlots.length);
+      const pickedSlot = Object.assign({}, targetSlots[pickedIndex]); 
+      availableSlots = availableSlots.filter(s => s.id !== targetSlots[pickedIndex].id);
+
+      if (isOverflowMode) {
+        pickedSlot.x += (Math.random() * 6 - 3);
+        pickedSlot.y += (Math.random() * 6 - 3);
+      }
+      return pickedSlot;
+    }
+
+    function handleManualSubmit() {
+      const nameInput = document.getElementById('name-input');
+      const wishInput = document.getElementById('wish-input');
+      if (!nameInput.value || !wishInput.value) return alert("名前と願い事を入力してください❄️");
+      
+      const newWish = createWishData(nameInput.value, wishInput.value);
+      wishesData.push(newWish);
+      saveWishesToStorage();
+      renderOrnamentDOM(newWish, true); 
+      wishInput.value = '';
+    }
+
+    function createWishData(name, wish) {
+      const slot = pickRandomSlot();
+      return {
+        id: Date.now() + Math.random().toString(36).substr(2, 5),
+        name: name, wish: wish, icon: getNextOrnament(),
+        treeId: slot.treeId, slotId: slot.id, x: slot.x, y: slot.y,
+        isOverflow: isOverflowMode
+      };
+    }
+
+    function renderOrnamentDOM(wishData, isNew = false) {
+      const targetTree = document.getElementById(wishData.treeId);
+      const ornament = document.createElement('div');
+      ornament.className = 'ornament';
+      ornament.id = `ornament-${wishData.id}`;
+      ornament.innerText = wishData.icon;
+      ornament.style.top = `${wishData.y}%`; 
+      ornament.style.left = `${wishData.x}%`;
+      ornament.onclick = () => showWishModal(wishData.id, wishData.wish, wishData.name);
+      
+      if (!isNew) ornament.style.animation = 'none'; 
+      targetTree.appendChild(ornament);
+      if (isNew) createSparkle(wishData.x, wishData.y, targetTree);
+    }
+
+    // ★ ツリー表示UI切り替え（完全データ保護版）
+    function updateTreeUI() {
+      const btn = document.getElementById('single-tree-btn');
+      const leftTree = document.getElementById('tree-left');
+      const rightTree = document.getElementById('tree-right');
+      const mainTree = document.getElementById('main-tree');
+
+      if (isSingleTreeMode) {
+        btn.innerText = "✅ 中央のみ (最大34個)";
+        btn.style.background = "rgba(46, 125, 50, 0.8)";
+        leftTree.classList.add('hidden'); rightTree.classList.add('hidden');
+        mainTree.style.height = "72vh"; mainTree.style.maxWidth = "55vw";
+      } else {
+        btn.innerText = "🌲 中央のみに切替 (最大34個)";
+        btn.style.background = "rgba(255, 255, 255, 0.2)";
+        leftTree.classList.remove('hidden'); rightTree.classList.remove('hidden');
+        mainTree.style.height = "62vh"; mainTree.style.maxWidth = "45vw";
+      }
+    }
+
+    function toggleSingleModeManual() {
+      if (!isSingleTreeMode) {
+        isSingleTreeMode = true; 
+        updateTreeUI(); // CSSで左右を隠すだけ！データもDOMも消しません。
+        // 空きスロットからは左右を外す
+        availableSlots = availableSlots.filter(s => s.treeId === 'main-tree');
+      } else {
+        isSingleTreeMode = false; 
+        updateTreeUI(); // CSSで左右を再表示
+        const usedLeftSlots = wishesData.filter(w => w.treeId === 'tree-left' && !w.isOverflow).map(w => w.slotId);
+        const usedRightSlots = wishesData.filter(w => w.treeId === 'tree-right' && !w.isOverflow).map(w => w.slotId);
+
+        subTreeSlotsLeft.forEach(s => {
+          if (!usedLeftSlots.includes(s.id)) availableSlots.push({ id: s.id, treeId: 'tree-left', x: s.x, y: s.y });
+        });
+        subTreeSlotsRight.forEach(s => {
+          if (!usedRightSlots.includes(s.id)) availableSlots.push({ id: s.id, treeId: 'tree-right', x: s.x, y: s.y });
+        });
+        shuffleArray(availableSlots);
+      }
+      checkOverflowStatus();
+    }
+
+    function checkOverflowStatus() {
+      if (wishesData.length > 76 && !isSingleTreeMode) {
+        isOverflowMode = true; document.getElementById('over-limit-warning').style.display = 'block';
+      } else {
+        isOverflowMode = false; document.getElementById('over-limit-warning').style.display = 'none';
+      }
+    }
+
+    // 個別削除機能
+    function deleteCurrentWish() {
+      if(confirm("この願い事をツリーから外しますか？")) {
+        const targetWish = wishesData.find(w => w.id === currentOpenWishId);
+        if(targetWish) {
+          undoStack.push({ type: 'single', data: targetWish });
+          const elm = document.getElementById(`ornament-${currentOpenWishId}`);
+          if(elm) elm.remove();
+          
+          if(!targetWish.isOverflow) {
+             availableSlots.push({ id: targetWish.slotId, treeId: targetWish.treeId, x: targetWish.x, y: targetWish.y });
+             shuffleArray(availableSlots);
+          }
+          wishesData = wishesData.filter(w => w.id !== currentOpenWishId);
+          saveWishesToStorage(); closeModal('modal'); checkOverflowStatus();
+        }
+      }
+    }
+
+    // 全削除
+    function deleteAllWishes() {
+      if(confirm("すべての願い事を削除して初期化します。本当によろしいですか？")) {
+        undoStack.push({ type: 'all', data: [...wishesData] });
+        document.querySelectorAll('.ornament').forEach(e => e.remove());
+        wishesData = []; localStorage.removeItem('christmasWishesForest'); 
+        initializeSlots(); checkOverflowStatus();
+      }
+    }
+
+    // Undo
+    function undoLastAction() {
+      if (undoStack.length === 0) return alert("元に戻す履歴がありません。");
+      const lastAction = undoStack.pop(); 
+
+      if (lastAction.type === 'single') {
+        wishesData.push(lastAction.data);
+        renderOrnamentDOM(lastAction.data, true); 
+        if (!lastAction.data.isOverflow) availableSlots = availableSlots.filter(s => s.id !== lastAction.data.slotId);
+      } else if (lastAction.type === 'all') {
+        wishesData = lastAction.data;
+        document.querySelectorAll('.ornament').forEach(e => e.remove());
+        wishesData.forEach(w => renderOrnamentDOM(w, false));
+        initializeSlots();
+        wishesData.forEach(w => {
+          if (!w.isOverflow) availableSlots = availableSlots.filter(s => s.id !== w.slotId);
+        });
+      }
+      saveWishesToStorage(); checkOverflowStatus();
+      if (wishesData.length > 34 && isSingleTreeMode) { isSingleTreeMode = false; updateTreeUI(); }
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // --- その他UI機能 ---
+    function createSparkle(x, y, parentElement) {
+      const effect = document.createElement('div');
+      effect.className = 'sparkle-effect';
+      effect.style.left = `${x}%`; effect.style.top = `${y}%`;
+      const ring = document.createElement('div'); ring.className = 'sparkle-ring'; effect.appendChild(ring);
+      for(let i=0; i<6; i++) {
+        const star = document.createElement('div'); star.className = 'sparkle-star';
+        star.style.setProperty('--deg', `${i * 60}deg`); effect.appendChild(star);
+      }
+      parentElement.appendChild(effect);
+      setTimeout(() => effect.remove(), 1000);
+    }
+
+    const ornamentIcons = ['🦌', '🎁', '🔔', '⛄', '🧦', '🧤', '🍰', '🎄', '🎀', '🍗', '🍬', '🌟', '❄️', '🕯️', '🍪', '👼'];
+    let iconBag = []; let lastIcon = '';
+    function getNextOrnament() {
+      if (iconBag.length === 0) {
+        iconBag = [...ornamentIcons]; shuffleArray(iconBag);
+        if (iconBag[0] === lastIcon) iconBag.push(iconBag.shift());
+      }
+      const nextIcon = iconBag.shift(); lastIcon = nextIcon; return nextIcon;
+    }
+
+    function flySanta() {
+      const santa = document.getElementById('santa-sleigh');
+      const isLeftToRight = Math.random() > 0.5;
+      const startY = Math.random() * 20 + 5; 
+      const endY = startY + (Math.random() * 15 - 7.5); 
+      santa.style.setProperty('--start-y', `${startY}vh`);
+      santa.style.setProperty('--end-y', `${endY}vh`);
+      if(isLeftToRight) {
+        santa.style.setProperty('--start-x', `-30vw`); santa.style.setProperty('--end-x', `120vw`); santa.style.setProperty('--flip', `1`);
+      } else {
+        santa.style.setProperty('--start-x', `120vw`); santa.style.setProperty('--end-x', `-30vw`); santa.style.setProperty('--flip', `-1`);
+      }
+      santa.classList.remove('fly-animation'); void santa.offsetWidth; santa.classList.add('fly-animation');
+    }
+    
+    function startSantaTimer() {
+      if (santaTimer) clearInterval(santaTimer);
+      setTimeout(flySanta, 5000);
+      santaTimer = setInterval(flySanta, santaIntervalMinutes * 60 * 1000);
+    }
+    startSantaTimer();
+
+    // 🎵 BGMプレイリスト 🎵
+    const bgmPlaylist = [
+    "audio/We_Wish_You_A_Merry_Christmas-MB03-2(Reverb-Fast).mp3",
+    "audio/We_Wish_You_A_Merry_Christmas-MB02-3(Reverb-Fast).mp3",
+    "audio/We_Wish_You_A_Merry_Christmas-MB01-3(Reverb-Fast).mp3",
+    "audio/Silent_Night-MB03-2(Reverb-Fast).mp3",
+    "audio/Silent_Night-MB01-2(Reverb-Fast).mp3",
+    "audio/Silent_Night-MB02-2(Reverb-Fast).mp3",
+    "audio/Jingle_Bells-MB01-2(Reverb-Fast).mp3",
+    "audio/Jingle_Bells-MB02-2(Reverb-Fast).mp3",
+    "audio/Jingle_Bells-MB03-2(Reverb-Fast).mp3",
+    "audio/Deck_The_Halls-MB01-2(Reverb-Fast).mp3",
+    "audio/Joy_To_The_World-MB01-2(Reverb-Fast).mp3",
+    "audio/O_Holy_Night-MB01-2(Reverb-Fast).mp3"
+    ];
+    let currentBgmIndex = -1;
+
+    const bgm = document.getElementById('bgm');
+    const bgmBtn = document.getElementById('bgm-btn');
+    let isPlaying = false;
+
+    // 次のランダムな曲を再生する関数
+    function playNextBgm() {
+      if (bgmPlaylist.length === 0) return;
+      let nextIndex;
+      if (bgmPlaylist.length > 1) {
+        do { nextIndex = Math.floor(Math.random() * bgmPlaylist.length); } while (nextIndex === currentBgmIndex);
+      } else { nextIndex = 0; }
+      currentBgmIndex = nextIndex;
+      bgm.src = bgmPlaylist[currentBgmIndex];
+      bgm.play().catch(e => console.error("BGM再生エラー:", e));
+    }
+
+    // 曲が終わったら自動で次の曲へ
+    bgm.addEventListener('ended', playNextBgm);
+
+    // BGMボタンを押したときの処理
+    bgmBtn.addEventListener('click', () => {
+      if (bgmPlaylist.length === 0) {
+        return alert("音楽ファイルが設定されていません。\nHTMLコード下部の bgmPlaylist の配列（[ ]の中）にファイル名を入力してください。");
+      }
+      if (isPlaying) {
+        bgm.pause(); bgmBtn.innerText = "🔇";
+      } else {
+        if (!bgm.src || currentBgmIndex === -1) { playNextBgm(); } else { bgm.play(); }
+        bgmBtn.innerText = "🔊";
+      }
+      isPlaying = !isPlaying;
+    });
+
+
+    document.getElementById('debug-btn').addEventListener('click', () => {
+      const pass = prompt("管理者パスワードを入力してください");
+      if (pass === "0302") document.getElementById('admin-modal').style.display = 'flex';
+      else if (pass !== null) alert("パスワードが違います。");
+    });
+
+    function saveAdminSettings() {
+      mainTreeProbability = parseInt(document.getElementById('prob-input').value, 10);
+      const newInterval = parseInt(document.getElementById('santa-interval-input').value, 10);
+      if (newInterval !== santaIntervalMinutes) { santaIntervalMinutes = newInterval; startSantaTimer(); }
+      alert("設定を保存しました！"); closeModal('admin-modal');
+    }
+
+    function runDebugGeneration() {
+      const count = parseInt(document.getElementById('debug-count-input').value, 10);
+      if (count > 0) {
+        for (let i = 0; i < count; i++) {
+          setTimeout(() => {
+            const newWish = createWishData(`テスト生徒${i + 1}`, `自動生成された ${i + 1} 番目の願い事です。`);
+            wishesData.push(newWish);
+            renderOrnamentDOM(newWish, true);
+            if(i === count - 1) saveWishesToStorage(); 
+          }, i * 150);
+        }
+        closeModal('admin-modal');
+      } else { alert("有効な数字を入力してください。"); }
+    }
+
+    function showWishModal(id, wish, name) {
+      currentOpenWishId = id; 
+      document.getElementById('modal-wish-text').innerText = wish;
+      document.getElementById('modal-name-text').innerText = name + " さんより";
+      document.getElementById('modal').style.display = 'flex';
+    }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; currentOpenWishId = null; }
+    window.onclick = (e) => { if (e.target.classList.contains('modal-overlay')) { e.target.style.display = 'none'; currentOpenWishId = null; } }
+
+    function createSnowflake() {
+      const snow = document.createElement('div'); snow.classList.add('snowflake');
+      const size = Math.random() * 0.5 + 0.2; 
+      snow.style.width = `${size}vw`; snow.style.height = `${size}vw`;
+      snow.style.left = `${Math.random() * 100}vw`; snow.style.opacity = Math.random() * 0.7 + 0.3;
+      const fallDuration = Math.random() * 5 + 6; const swayDuration = Math.random() * 3 + 2;
+      snow.style.transition = `top ${fallDuration}s linear`; snow.style.animation = `sway ${swayDuration}s ease-in-out infinite alternate`;
+      document.body.appendChild(snow);
+      setTimeout(() => { snow.style.top = '100vh'; }, 50);
+      setTimeout(() => { snow.remove(); }, fallDuration * 1000);
+    }
+    setInterval(createSnowflake, 150);
+
+  </script>
+</body>
+</html>
