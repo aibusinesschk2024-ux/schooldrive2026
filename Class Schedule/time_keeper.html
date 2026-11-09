@@ -915,31 +915,38 @@
             document.getElementById('btn-sw-start').className = 'btn btn-lg btn-primary';
         }
         function stopStopwatch() { clearInterval(stopwatchInterval); isStopwatchRunning = false; }
-
+        
         function playSystemSound(type) {
             if (!config.soundEnabled) return;
+            
+            // 1. 設定画面で先生が独自に登録した音源があれば、そちらを最優先で鳴らす
             if (customAudios[type]) {
                 try {
                     const audio = new Audio(customAudios[type]);
-                    audio.play(); return;
+                    audio.play(); 
+                    return;
                 } catch(e) { console.error(e); }
             }
+
+            // 2. 登録がない（初期状態の）場合は、audioフォルダ内の指定ファイルを鳴らす
             try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContext) return;
-                const ctx = new AudioContext();
-                const playTone = (freq, duration, startTime) => {
-                    const osc = ctx.createOscillator(), gain = ctx.createGain();
-                    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, startTime);
-                    gain.gain.setValueAtTime(0.1, startTime); gain.gain.exponentialRampToValueAtTime(0.00001, startTime + duration);
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.start(startTime); osc.stop(startTime + duration);
-                };
-                const now = ctx.currentTime;
-                if (type === 'start') { playTone(880, 0.1, now); playTone(880, 0.1, now + 0.15); }
-                else if (type === 'warn') { playTone(660, 0.4, now); }
-                else if (type === 'danger') { playTone(554, 0.15, now); playTone(554, 0.15, now + 0.2); playTone(554, 0.15, now + 0.4); }
-                else if (type === 'end') { playTone(392, 0.3, now); playTone(523, 0.3, now + 0.3); playTone(587, 0.3, now + 0.6); playTone(659, 0.5, now + 0.9); }
+                let defaultAudioSrc = "";
+                
+                // ↓ 用意するファイル名に合わせて変更してください
+                if (type === 'start') {
+                    defaultAudioSrc = "audio/hajime.mp3";   // コマ開始時
+                } else if (type === 'warn') {
+                    defaultAudioSrc = "audio/5funmae.mp3";    // 警告時（残り5分など）
+                } else if (type === 'danger') {
+                    defaultAudioSrc = "audio/danger.mp3";  // 危険時（残り1分など）
+                } else if (type === 'end') {
+                    defaultAudioSrc = "audio/owari.mp3";     // 時間終了時
+                }
+                
+                if (defaultAudioSrc) {
+                    const defaultAudio = new Audio(defaultAudioSrc);
+                    defaultAudio.play().catch(e => console.error("音声再生エラー:", e));
+                }
             } catch (e) { console.error(e); }
         }
 
