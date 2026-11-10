@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高校数学B「統計的な推測」体系まとめ＆インタラクティブ実験室</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- KaTeX for Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans JP"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      overflow-x: hidden;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    /* Tab transition */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Math display tweaks */
+    .katex-display {
+      margin: 0.65em 0 !important;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.2em 0;
+    }
+    /* Range Slider Styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 6px;
+      cursor: pointer;
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: #1e40af;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -7px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      border: 2px solid #ffffff;
+      transition: transform 0.15s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #2563eb;
+    }
+    .notebook-badge {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-brand-100 selection:text-brand-900">
+
+  <!-- Top Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-brand-800 flex items-center justify-center text-white shadow-sm shrink-0">
+            <i data-lucide="sigma" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-50 text-brand-800 border border-brand-200">高校数学B・探究</span>
+              <span class="text-xs font-medium px-2 py-0.5 rounded notebook-badge">自作ノート完全統合版</span>
+            </div>
+            <h1 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-0.5">
+              「統計的な推測」体系まとめ ＆ インタラクティブ実験室
+            </h1>
+          </div>
+        </div>
+
+        <!-- Quick Jump / Mode Indicator -->
+        <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 self-start md:self-auto">
+          <i data-lucide="sparkles" class="w-4 h-4 text-amber-500 shrink-0"></i>
+          <span>数式とグラフを動かして「なぜそうなるか」を直感的に体感できます</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 overflow-x-auto pb-px -mb-px scrollbar-none" aria-label="Tabs">
+        <button onclick="switchTab('tab1')" id="btn-tab1" class="tab-btn group inline-flex items-center gap-2 py-3 px-4 border-b-2 font-bold text-sm whitespace-nowrap transition-all border-brand-800 text-brand-800 bg-brand-50/50 rounded-t-lg">
+          <span class="w-5 h-5 rounded-full bg-brand-800 text-white text-xs flex items-center justify-center">1</span>
+          <span>全体マップ＆確率の基礎</span>
+        </button>
+        <button onclick="switchTab('tab2')" id="btn-tab2" class="tab-btn group inline-flex items-center gap-2 py-3 px-4 border-b-2 font-bold text-sm whitespace-nowrap transition-all border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300 rounded-t-lg">
+          <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center group-hover:bg-slate-300">2</span>
+          <span>正規分布と二項近似 <span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">実験①</span></span>
+        </button>
+        <button onclick="switchTab('tab3')" id="btn-tab3" class="tab-btn group inline-flex items-center gap-2 py-3 px-4 border-b-2 font-bold text-sm whitespace-nowrap transition-all border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300 rounded-t-lg">
+          <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center group-hover:bg-slate-300">3</span>
+          <span>標本抽出と中心極限定理</span>
+        </button>
+        <button onclick="switchTab('tab4')" id="btn-tab4" class="tab-btn group inline-flex items-center gap-2 py-3 px-4 border-b-2 font-bold text-sm whitespace-nowrap transition-all border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300 rounded-t-lg">
+          <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center group-hover:bg-slate-300">4</span>
+          <span>区間推定と $\sigma \to s$ 代用 <span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">実験②</span></span>
+        </button>
+        <button onclick="switchTab('tab5')" id="btn-tab5" class="tab-btn group inline-flex items-center gap-2 py-3 px-4 border-b-2 font-bold text-sm whitespace-nowrap transition-all border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300 rounded-t-lg">
+          <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center group-hover:bg-slate-300">5</span>
+          <span>仮説検定と「日本語の壁」 <span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">実験③</span></span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ==========================================
+         TAB 1: 全体マップ ＆ 確率変数の基礎 (ノート1〜3枚目)
+         ========================================== -->
+    <section id="tab1" class="tab-content active space-y-8">
+      
+      <!-- Big Picture Visual Roadmap (ノート1枚目対応) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 border-b border-slate-100 pb-4">
+          <div>
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 1 対応</span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">統計的な推測 全体ロードマップ</h2>
+          </div>
+          <p class="text-sm text-slate-500">各カードをクリックすると該当セクションへジャンプします</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
+          <!-- Step 1 -->
+          <div onclick="switchTab('tab2')" class="cursor-pointer group bg-slate-50 hover:bg-brand-50/60 border border-slate-200 hover:border-brand-400 rounded-xl p-4 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800 group-hover:bg-brand-700 group-hover:text-white transition-colors">STEP 1</span>
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-slate-400 group-hover:text-brand-600"></i>
+              </div>
+              <h3 class="font-bold text-slate-900 text-base mb-1">① 単純な分布と近似</h3>
+              <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                離散型の<strong>二項分布 $B(n,p)$</strong> は、$n$ が大きくなると連続型の<strong>正規分布 $N(m,\sigma^2)$</strong> に近づく。
+              </p>
+            </div>
+            <div class="bg-white rounded-lg p-2.5 border border-slate-200/80 text-xs">
+              <div class="font-semibold text-slate-700 mb-1">標準化で $N(0,1)$ へ変換：</div>
+              $$Z = \frac{X - m}{\sigma}$$
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div onclick="switchTab('tab3')" class="cursor-pointer group bg-slate-50 hover:bg-brand-50/60 border border-slate-200 hover:border-brand-400 rounded-xl p-4 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800 group-hover:bg-brand-700 group-hover:text-white transition-colors">STEP 2</span>
+                <i data-lucide="git-Fork" class="w-4 h-4 text-slate-400 group-hover:text-brand-600"></i>
+              </div>
+              <h3 class="font-bold text-slate-900 text-base mb-1">② 母集団からの抽出</h3>
+              <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                母集団（平均 $m$, 標準偏差 $\sigma$, 比率 $p$）から $n$ 個を抽出。<strong>中心極限定理</strong>より正規分布に従う。
+              </p>
+            </div>
+            <div class="bg-white rounded-lg p-2.5 border border-slate-200/80 text-xs space-y-1">
+              <div>標本平均 $\overline{X}$：$\sigma(\overline{X}) = \dfrac{\sigma}{\sqrt{n}}$</div>
+              <div>標本比率 $R$：$\sigma(R) = \sqrt{\dfrac{p(1-p)}{n}}$</div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div onclick="switchTab('tab4')" class="cursor-pointer group bg-slate-50 hover:bg-emerald-50/60 border border-slate-200 hover:border-emerald-400 rounded-xl p-4 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white transition-colors">STEP 3</span>
+                <i data-lucide="Minimize-2" class="w-4 h-4 text-emerald-500"></i>
+              </div>
+              <h3 class="font-bold text-slate-900 text-base mb-1">③ 区間推定（未知の真値）</h3>
+              <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                母集団の真の値（$m$ や $p$）が<strong>未知</strong>のとき、手元の標本データ（$\overline{X}$ や $R$）から逆算して幅で囲む。
+              </p>
+            </div>
+            <div class="bg-white rounded-lg p-2.5 border border-slate-200/80 text-xs">
+              <div class="font-semibold text-emerald-800 mb-0.5">95%信頼区間 ($k=1.96$)：</div>
+              $$\overline{X} - k\frac{s}{\sqrt{n}} \leqq m \leqq \overline{X} + k\frac{s}{\sqrt{n}}$$
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div onclick="switchTab('tab5')" class="cursor-pointer group bg-slate-50 hover:bg-rose-50/60 border border-slate-200 hover:border-rose-400 rounded-xl p-4 transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 group-hover:bg-rose-600 group-hover:text-white transition-colors">STEP 4</span>
+                <i data-lucide="scale" class="w-4 h-4 text-rose-500"></i>
+              </div>
+              <h3 class="font-bold text-slate-900 text-base mb-1">④ 仮説検定（確率的背理法）</h3>
+              <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                「偶然だ（差はない）」という<strong>帰無仮説 $H_0$</strong> を立て、今回のデータが起きる確率（P値）が極小なら棄却！
+              </p>
+            </div>
+            <div class="bg-white rounded-lg p-2.5 border border-slate-200/80 text-xs">
+              <div class="font-semibold text-rose-800">棄却域に入れば $H_0$ を棄却！</div>
+              <div class="text-slate-500 mt-0.5">入らなければ「棄却できない（保留）」</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 確率変数の基礎 & 一次変換 (ノート2枚目対応) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 左：期待値・分散・標準偏差 -->
+        <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 2 対応</span>
+            <h3 class="text-lg font-bold text-slate-900">確率変数 $X$ の基礎定義</h3>
+          </div>
+          <p class="text-sm text-slate-600 mb-4">
+            確率変数 $X$ のとりうる値 $x_i$ と、その確率 $p_i$ の対応関係を<strong>確率分布</strong>といいます（ただし $p_i \geqq 0,\; \sum p_i = 1$）。
+          </p>
+
+          <div class="space-y-3">
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span class="text-xs font-bold text-brand-700 uppercase">Expected Value</span>
+                <h4 class="font-bold text-slate-900">期待値（平均） $E[X]$</h4>
+                <p class="text-xs text-slate-500">値 × 確率 の総和（分布の重心）</p>
+              </div>
+              <div class="bg-white px-4 py-2 rounded-lg border border-slate-200 text-sm">
+                $$E[X] = \sum_{i=1}^{n} x_i p_i = m$$
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span class="text-xs font-bold text-brand-700 uppercase">Variance</span>
+                <h4 class="font-bold text-slate-900">分散 $V[X]$</h4>
+                <p class="text-xs text-slate-500">偏差 $(X - E[X])$ の2乗の期待値 ＝ <strong>「2乗の平均 － 平均の2乗」</strong></p>
+              </div>
+              <div class="bg-white px-4 py-2 rounded-lg border border-slate-200 text-sm">
+                $$V[X] = E[(X - E[X])^2] = E[X^2] - (E[X])^2$$
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span class="text-xs font-bold text-brand-700 uppercase">Standard Deviation</span>
+                <h4 class="font-bold text-slate-900">標準偏差 $\sigma[X]$</h4>
+                <p class="text-xs text-slate-500">分散にルートをかぶせて元の単位に戻したもの</p>
+              </div>
+              <div class="bg-white px-4 py-2 rounded-lg border border-slate-200 text-sm">
+                $$\sigma[X] = \sqrt{V[X]}$$
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右：確率変数の一次変換 Y = aX + b -->
+        <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full">超重要公式</span>
+              <h3 class="text-lg font-bold text-slate-900">確率変数の変換 $Y = aX + b$</h3>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">
+              元の確率変数 $X$ を $a$ 倍して $b$ 足した新しい変数 $Y = aX + b$ の期待値・分散・標準偏差はどう変化するか？（後の「標準化」や「標本比率」の導出で大活躍します）
+            </p>
+
+            <div class="bg-brand-50/60 border border-brand-200 rounded-xl p-4 space-y-3">
+              <div class="bg-white p-3 rounded-lg border border-slate-200">
+                <div class="text-xs font-bold text-slate-500 mb-1">① 期待値は「$a$ 倍して $b$ 足す」そのまま！</div>
+                $$E[Y] = E[aX + b] = aE[X] + b$$
+              </div>
+              <div class="bg-white p-3 rounded-lg border border-slate-200">
+                <div class="text-xs font-bold text-rose-600 mb-1">② 分散は「平行移動 $+b$ は無関係、倍率は $a^2$ 倍」！</div>
+                $$V[Y] = V[aX + b] = a^2 V[X]$$
+              </div>
+              <div class="bg-white p-3 rounded-lg border border-slate-200">
+                <div class="text-xs font-bold text-slate-500 mb-1">③ 標準偏差は「$|a|$ 倍」（絶対値を忘れずに）</div>
+                $$\sigma[Y] = \sigma[aX + b] = |a|\sigma[X]$$
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+            <i data-lucide="lightbulb" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+            <span><strong>直感イメージ：</strong> 全員のテストの点数を $+10$ 点（$+b$）底上げしても、平均点は $10$ 点上がるだけで「散らばり具合（分散・標準偏差）」は全く変わりません！</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 離散型（二項分布） vs 連続型（確率密度関数） (ノート3枚目対応) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex items-center gap-2 mb-6">
+          <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 3 対応</span>
+          <h3 class="text-xl font-bold text-slate-900">離散型の確率変数 と 連続型の確率変数</h3>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 離散型 -->
+          <div class="rounded-xl border border-slate-200 p-5 bg-slate-50/50">
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-bold">離散型（とびとびの値）</span>
+              <span class="text-xs text-slate-500">例：サイコロの目、コインの表の回数</span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-base mb-2">代表選手：二項分布 $B(n, p)$</h4>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+              1回の試行で事象 $A$ の起こる確率が $p$ のとき、この試行を独立に $n$ 回繰り返す（反復試行）中で事象 $A$ が起こる回数 $X$ の分布。
+            </p>
+            <div class="bg-white rounded-xl p-4 border border-slate-200 space-y-2 text-sm">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="font-bold text-slate-700">期待値</span>
+                <span>$E[X] = np$</span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="font-bold text-slate-700">分散</span>
+                <span>$V[X] = np(1-p)$</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700">標準偏差</span>
+                <span>$\sigma[X] = \sqrt{np(1-p)}$</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 mt-3">
+              ※ $P(a \leqq X \leqq b)$ は、棒グラフ（相対度数）の<strong>縦棒の和</strong>で求める。
+            </p>
+          </div>
+
+          <!-- 連続型 -->
+          <div class="rounded-xl border border-slate-200 p-5 bg-slate-50/50">
+            <div class="flex items-center justify-between mb-3">
+              <span class="px-2.5 py-1 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">連続型（なめらかな値）</span>
+              <span class="text-xs text-slate-500">例：身長、体重、測定誤差</span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-base mb-2">確率密度関数 $f(x)$ と面積＝確率</h4>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+              連続的な値をとる確率変数 $X$（範囲 $\alpha \leqq X \leqq \beta$）では、曲線 $y = f(x)$ と横軸で囲まれた<strong>「面積（定積分）」が確率</strong>になります。
+            </p>
+            <div class="bg-white rounded-xl p-4 border border-slate-200 space-y-2 text-xs sm:text-sm">
+              <div>(i) 常に $f(x) \geqq 0$</div>
+              <div>(ii) 区間 $a \leqq X \leqq b$ の確率： $P(a \leqq X \leqq b) = \displaystyle\int_{a}^{b} f(x)\,dx$</div>
+              <div>(iii) 全区間の面積は $1$： $P(\alpha \leqq X \leqq \beta) = \displaystyle\int_{\alpha}^{\beta} f(x)\,dx = 1$</div>
+              <div class="text-rose-600 font-semibold pt-1 border-t border-slate-100">
+                ※ ピンポイント1点の確率は面積ゼロなので $P(X = k) = 0$
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 2: 正規分布と二項分布の近似 (ノート4〜5枚目)
+         ========================================== -->
+    <section id="tab2" class="tab-content space-y-8">
+      
+      <!-- 正規分布の基本と標準化 (ノート4枚目対応) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 4 対応</span>
+            <h3 class="text-lg font-bold text-slate-900">正規分布 $N(m, \sigma^2)$ の性質</h3>
+          </div>
+          <p class="text-xs text-slate-600 mb-3">
+            平均 $m$、標準偏差 $\sigma$（分散 $\sigma^2$）の左右対称な釣鐘（ベル）型の連続分布です。
+          </p>
+          <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs mb-4 overflow-x-auto">
+            $$f(x) = \frac{1}{\sqrt{2\pi}\sigma}\exp\left(-\frac{(x-m)^2}{2\sigma^2}\right) \quad \left(E[X]=m,\; \sigma[X]=\sigma\right)$$
+          </div>
+
+          <h4 class="font-bold text-sm text-slate-800 mb-2">覚えておきたい $\sigma$ 区間の確率（面積）</h4>
+          <div class="space-y-2 text-xs sm:text-sm">
+            <div class="flex items-center justify-between p-2.5 rounded-lg bg-blue-50/70 border border-blue-200">
+              <span class="font-bold text-blue-900">$1\sigma$ 区間：$P(m-\sigma \leqq X \leqq m+\sigma)$</span>
+              <span class="font-black text-blue-700">約 $68.3\%$ ($0.6827$)</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
+              <span class="font-bold text-emerald-900">$2\sigma$ 区間：$P(m-2\sigma \leqq X \leqq m+2\sigma)$</span>
+              <span class="font-black text-emerald-700">約 $95.4\%$ ($0.9545$)</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 rounded-lg bg-purple-50/70 border border-purple-200">
+              <span class="font-bold text-purple-900">$3\sigma$ 区間：$P(m-3\sigma \leqq X \leqq m+3\sigma)$</span>
+              <span class="font-black text-purple-700">約 $99.7\%$ ($0.9973$)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 標準正規分布 N(0,1) と正規分布表の読み方 (ノート4枚目の図解再現) -->
+        <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 4 図解再現</span>
+              <h3 class="text-lg font-bold text-slate-900">標準正規分布 $N(0,1)$ と正規分布表のコツ</h3>
+            </div>
+            <p class="text-xs text-slate-600 mb-3">
+              どんな正規分布 $N(m, \sigma^2)$ も、次の<strong>標準化</strong>によって平均 $0$、標準偏差 $1$ の<strong>標準正規分布 $N(0,1)$</strong> に変換でき、教科書の「正規分布表」で確率が求められます。
+            </p>
+            <div class="bg-brand-50 border border-brand-200 rounded-xl p-3 text-center mb-4">
+              $$Z = \frac{X - m}{\sigma} \quad \Longrightarrow \quad Z \text{ は } N(0, 1) \text{ に従う}$$
+            </div>
+
+            <!-- ノート4枚目の「右が無限だから0.5から引く」図解 -->
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <div class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                <span>なぜ $P(Z \geqq u)$ は「$0.5 - p(u)$」で解くのか？</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center text-center text-xs">
+                <div class="bg-white p-2.5 rounded-lg border border-slate-200">
+                  <div class="font-bold text-rose-600 mb-1">求めたい右端 $P(Z \geqq u)$</div>
+                  <svg viewBox="0 0 120 60" class="w-full h-12 mx-auto">
+                    <path d="M 10 50 Q 60 50 60 10 Q 60 50 110 50" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+                    <path d="M 60 50 C 40 50, 45 12, 60 12 C 75 12, 80 50, 110 50" fill="none" stroke="#334155" stroke-width="2"/>
+                    <path d="M 80 32 C 88 45, 95 50, 110 50 L 80 50 Z" fill="#f43f5e" opacity="0.6"/>
+                    <line x1="60" y1="8" x2="60" y2="52" stroke="#64748b" stroke-dasharray="2,2"/>
+                    <line x1="80" y1="28" x2="80" y2="52" stroke="#e11d48" stroke-width="1.5"/>
+                    <line x1="5" y1="50" x2="115" y2="50" stroke="#475569"/>
+                  </svg>
+                  <div class="text-[11px] text-slate-500 mt-1">右が $\infty$ だから表にない</div>
+                </div>
+
+                <div class="bg-white p-2.5 rounded-lg border border-slate-200">
+                  <div class="font-bold text-slate-700 mb-1">右半分全体 $= 0.5$</div>
+                  <svg viewBox="0 0 120 60" class="w-full h-12 mx-auto">
+                    <path d="M 60 12 C 75 12, 80 50, 110 50 L 60 50 Z" fill="#cbd5e1" opacity="0.7"/>
+                    <path d="M 10 50 C 40 50, 45 12, 60 12 C 75 12, 80 50, 110 50" fill="none" stroke="#334155" stroke-width="2"/>
+                    <line x1="60" y1="8" x2="60" y2="52" stroke="#0f172a" stroke-width="1.5"/>
+                    <line x1="5" y1="50" x2="115" y2="50" stroke="#475569"/>
+                  </svg>
+                  <div class="text-[11px] text-slate-500 mt-1">から</div>
+                </div>
+
+                <div class="bg-white p-2.5 rounded-lg border border-slate-200">
+                  <div class="font-bold text-brand-700 mb-1">表で解ける $p(u)$ を引く！</div>
+                  <svg viewBox="0 0 120 60" class="w-full h-12 mx-auto">
+                    <path d="M 60 12 C 68 12, 74 22, 80 32 L 80 50 L 60 50 Z" fill="#3b82f6" opacity="0.6"/>
+                    <path d="M 10 50 C 40 50, 45 12, 60 12 C 75 12, 80 50, 110 50" fill="none" stroke="#334155" stroke-width="2"/>
+                    <line x1="60" y1="8" x2="60" y2="52" stroke="#0f172a"/>
+                    <line x1="80" y1="28" x2="80" y2="52" stroke="#2563eb" stroke-width="1.5"/>
+                    <line x1="5" y1="50" x2="115" y2="50" stroke="#475569"/>
+                  </svg>
+                  <div class="text-[11px] text-brand-700 font-bold mt-1">$0.5 - P(0 \leqq Z \leqq u)$</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- インタラクティブ機能①：二項分布の正規近似シミュレーター (ノート5枚目対応) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-white bg-brand-700 px-2.5 py-1 rounded-full">インタラクティブ実験 ①</span>
+              <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 5 対応</span>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mt-1">二項分布 $B(n,p)$ の正規分布近似シミュレーター</h3>
+            <p class="text-sm text-slate-600 mt-0.5">
+              試行回数 $n$ を大きくしていくと、二項分布の棒グラフが滑らかな正規分布 $N(np, np(1-p))$ の曲線にぴったり重なる様子を動かして確認しよう！
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <!-- Controls & Live Formulas -->
+          <div class="lg:col-span-5 space-y-5 bg-slate-50 p-5 rounded-xl border border-slate-200">
+            <div>
+              <div class="flex justify-between text-sm font-bold mb-1.5">
+                <label for="binom-n" class="text-slate-800">試行回数 $n$（サンプルサイズ）</label>
+                <span id="binom-n-val" class="text-brand-700 font-mono text-base">50</span>
+              </div>
+              <input type="range" id="binom-n" min="6" max="150" step="2" value="50" class="w-full" oninput="updateBinomSim()">
+              <div class="flex justify-between text-[11px] text-slate-400 mt-1">
+                <span>少ない ($n=6$)</span>
+                <span>中程度 ($n=50$)</span>
+                <span>十分に大きい ($n=150$)</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-sm font-bold mb-1.5">
+                <label for="binom-p" class="text-slate-800">成功確率 $p$（1回あたり）</label>
+                <span id="binom-p-val" class="text-brand-700 font-mono text-base">0.50</span>
+              </div>
+              <input type="range" id="binom-p" min="0.1" max="0.9" step="0.05" value="0.5" class="w-full" oninput="updateBinomSim()">
+              <div class="flex justify-between text-[11px] text-slate-400 mt-1">
+                <span>左に偏る ($0.1$)</span>
+                <span>左右対称 ($0.5$)</span>
+                <span>右に偏る ($0.9$)</span>
+              </div>
+            </div>
+
+            <!-- Live Computed Parameters -->
+            <div class="bg-white rounded-xl p-4 border border-slate-200 space-y-2">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">現在の正規近似パラメータ</div>
+              <div class="grid grid-cols-3 gap-2 text-center pt-1">
+                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div class="text-[11px] text-slate-500">平均 $m = np$</div>
+                  <div id="binom-m" class="font-bold text-slate-900 text-sm sm:text-base mt-0.5">25.0</div>
+                </div>
+                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div class="text-[11px] text-slate-500">分散 $\sigma^2 = np(1-p)$</div>
+                  <div id="binom-v" class="font-bold text-slate-900 text-sm sm:text-base mt-0.5">12.50</div>
+                </div>
+                <div class="bg-brand-50 p-2 rounded-lg border border-brand-200">
+                  <div class="text-[11px] text-brand-800 font-semibold">標準偏差 $\sigma$</div>
+                  <div id="binom-sd" class="font-black text-brand-700 text-sm sm:text-base mt-0.5">3.54</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Note 5 Caution Box (Square root emphasis) -->
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-900">
+              <div class="font-bold flex items-center gap-1.5 text-rose-700 mb-1">
+                <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+                <span>【最重要】標準化の分母は「ルート（標準偏差）」を忘れない！</span>
+              </div>
+              <p class="mb-2 text-rose-800">分散 $\sigma^2 = np(1-p)$ をそのまま分母に書いてしまうミスが多発します。必ず平方根をとった標準偏差 $\sigma = \sqrt{np(1-p)}$ で割りましょう。</p>
+              <div class="bg-white rounded-lg py-1.5 px-2 border border-rose-200 text-center">
+                $$Z = \frac{X - np}{\sqrt{np(1-p)}}$$
+              </div>
+            </div>
+          </div>
+
+          <!-- Canvas Chart -->
+          <div class="lg:col-span-7 flex flex-col">
+            <div class="relative w-full h-72 sm:h-80 bg-slate-900 rounded-xl p-3 border border-slate-800 shadow-inner">
+              <canvas id="binomCanvas" class="w-full h-full block"></canvas>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-6 mt-3 text-xs text-slate-600">
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded-sm bg-blue-500/70 border border-blue-400 inline-block"></span>
+                <span>二項分布 $B(n,p)$ の確率（棒グラフ）</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-0.5 bg-amber-400 inline-block"></span>
+                <span>近似正規分布 $N(np, np(1-p))$ の密度曲線</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 3: 標本抽出と中心極限定理 (ノート5〜6枚目)
+         ========================================== -->
+    <section id="tab3" class="tab-content space-y-8">
+      
+      <!-- 母集団と標本抽出の概念図 (ノート5〜6枚目) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 標本平均 X-bar の分布 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 5 対応</span>
+              <h3 class="text-lg font-bold text-slate-900">① 標本平均 $\overline{X}$ の分布</h3>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">
+              母平均 $m$、母標準偏差 $\sigma$ の母集団から大きさ $n$ の無作為標本 $X_1, X_2, \dots, X_n$ を抽出したとき、それらの平均
+              $$\overline{X} = \frac{X_1 + X_2 + \cdots + X_n}{n}$$
+              自身もまた、標本を取り直すたびに値が少しずつブレる<strong>確率変数</strong>になります。
+            </p>
+
+            <div class="bg-brand-50/70 border border-brand-200 rounded-xl p-4 space-y-3 mb-4">
+              <div class="flex items-center justify-between border-b border-brand-200/60 pb-2">
+                <div>
+                  <div class="font-bold text-slate-900 text-sm">標本平均の期待値 $E[\overline{X}]$</div>
+                  <div class="text-xs text-slate-500">中心の位置は母平均 $m$ と一致！</div>
+                </div>
+                <div class="bg-white px-3 py-1.5 rounded-lg border border-brand-200 font-bold">
+                  $$E[\overline{X}] = m$$
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-slate-900 text-sm">標本平均の標準偏差 $\sigma[\overline{X}]$</div>
+                  <div class="text-xs text-rose-600 font-semibold">$n$ 個平均するとブレ幅は $\dfrac{1}{\sqrt{n}}$ に縮小！</div>
+                </div>
+                <div class="bg-white px-3 py-1.5 rounded-lg border border-brand-200 font-bold">
+                  $$\sigma[\overline{X}] = \frac{\sigma}{\sqrt{n}}$$
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 text-xs leading-relaxed">
+            <div class="font-bold text-slate-800 mb-1">💡 なぜ分母に $\sqrt{n}$ がつくのか？（導出）</div>
+            $$V[\overline{X}] = V\left[\frac{X_1 + \cdots + X_n}{n}\right] = \frac{1}{n^2}\left(V[X_1] + \cdots + V[X_n]\right) = \frac{1}{n^2}\cdot n\sigma^2 = \frac{\sigma^2}{n}$$
+            これのルートをとるので $\sigma[\overline{X}] = \sqrt{\dfrac{\sigma^2}{n}} = \dfrac{\sigma}{\sqrt{n}}$ となります。
+          </div>
+        </div>
+
+        <!-- 標本比率 R の分布 (ノート6枚目対応) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 6 対応</span>
+              <h3 class="text-lg font-bold text-slate-900">② 母比率 $p$ と 標本比率 $R$ の分布</h3>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">
+              ある特性をもつ要素の母比率が $p$ である母集団から大きさ $n$ の標本を抽出し、その特性をもつ個数を $X$ とすると、<strong>標本比率は $R = \dfrac{X}{n}$</strong> と表せます。
+            </p>
+
+            <!-- ノート6枚目の導出ステップを綺麗に整理 -->
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2.5 text-xs sm:text-sm mb-4">
+              <div class="font-bold text-brand-800">【ノート Page 6 の導出ステップ】</div>
+              <div>1. 個数 $X$ は二項分布 $B(n, p)$ に従うので、$E[X]=np,\; V[X]=np(1-p)$。</div>
+              <div>2. $R = \dfrac{1}{n}X$ に一次変換の公式を適用すると：</div>
+              <div class="bg-white p-2.5 rounded-lg border border-slate-200">
+                $$E[R] = E\left[\frac{X}{n}\right] = \frac{1}{n}E[X] = \frac{1}{n}\cdot np = p$$
+                $$V[R] = V\left[\frac{X}{n}\right] = \frac{1}{n^2}V[X] = \frac{np(1-p)}{n^2} = \frac{p(1-p)}{n}$$
+                $$\sigma[R] = \sqrt{V[R]} = \sqrt{\frac{p(1-p)}{n}}$$
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-center">
+            <div class="text-xs font-bold text-emerald-900 mb-1">$n$ が十分に大きいとき、標本比率 $R$ が従う分布：</div>
+            $$R \sim N\left(p,\; \frac{p(1-p)}{n}\right)$$
+          </div>
+        </div>
+      </div>
+
+      <!-- 大数の法則 vs 中心極限定理 の明確な比較 (ノート5・7枚目ブラッシュアップ) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full">混同注意！役割分担の整理</span>
+          <h3 class="text-xl font-bold text-slate-900">「大数の法則」と「中心極限定理」は何が違う？</h3>
+        </div>
+        <p class="text-sm text-slate-600 mb-6">
+          どちらも「標本の大きさ $n$ を大きくしたときに起きる嬉しい性質」ですが、保証している内容が異なります。ここを区別しておくと記述や共通テストの正誤問題で迷いません。
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="p-5 rounded-xl bg-amber-50/50 border border-amber-200">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded bg-amber-600 text-white text-xs font-bold">大数の法則</span>
+              <span class="text-xs font-bold text-amber-900">Law of Large Numbers</span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-base mb-2">「標本平均 $\overline{X}$ が、真の母平均 $m$ という一点に近づく」</h4>
+            <p class="text-xs text-slate-700 leading-relaxed mb-3">
+              サンプルサイズ $n$ を大きくすればするほど、標本の標準偏差 $\dfrac{\sigma}{\sqrt{n}}$ が $0$ に近づくため、標本平均 $\overline{X}$ が母平均 $m$ のすぐ近くに落ちる確率が $1$（$100\%$）に近づくという法則です。
+            </p>
+            <div class="bg-white p-2.5 rounded-lg border border-amber-200 text-xs text-slate-600">
+              <strong>一言で：</strong> 「たくさん調べれば、平均値は真の値にピタッと当たるようになる」
+            </div>
+          </div>
+
+          <div class="p-5 rounded-xl bg-brand-50/50 border border-brand-200">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded bg-brand-700 text-white text-xs font-bold">中心極限定理</span>
+              <span class="text-xs font-bold text-brand-900">Central Limit Theorem</span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-base mb-2">「母集団がどんな分布でも、$\overline{X}$ の分布の形は正規分布になる」</h4>
+            <p class="text-xs text-slate-700 leading-relaxed mb-3">
+              元の母集団がサイコロのような一様分布でも、偏ったいびつな分布であっても、$n$ が十分に大きければ、標本平均 $\overline{X}$ は近似的に<strong>正規分布 $N\left(m, \dfrac{\sigma^2}{n}\right)$ に従う</strong>という驚異の定理です。
+            </p>
+            <div class="bg-white p-2.5 rounded-lg border border-brand-200 text-xs text-slate-600">
+              <strong>一言で：</strong> 「だから区間推定や検定で $1.96$ などの<strong>正規分布表の数値が使える！</strong>」
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 4: 区間推定と σ→s 代用深掘り (ノート1・7枚目)
+         ========================================== -->
+    <section id="tab4" class="tab-content space-y-8">
+      
+      <!-- 区間推定の公式カード (ノート1・7枚目修正反映) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 1・7 対応</span>
+            <h3 class="text-xl font-black text-slate-900 mt-1">母平均 $m$ ・ 母比率 $p$ の区間推定</h3>
+          </div>
+          <!-- 信頼度切り替えピル -->
+          <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-start">
+            <span class="text-xs font-bold text-slate-600 px-2">信頼度係数 $k$：</span>
+            <button onclick="setConfidenceCoeff('1.64', '90%')" id="coeff-90" class="coeff-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:bg-white transition-all">90% (1.64)</button>
+            <button onclick="setConfidenceCoeff('1.96', '95%')" id="coeff-95" class="coeff-btn px-3 py-1 rounded-lg text-xs font-bold bg-brand-800 text-white shadow-sm transition-all">95% (1.96)</button>
+            <button onclick="setConfidenceCoeff('2.58', '99%')" id="coeff-99" class="coeff-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:bg-white transition-all">99% (2.58)</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 母平均 m の信頼区間 -->
+          <div class="rounded-xl border-2 border-brand-200 bg-brand-50/30 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-brand-800 bg-brand-100 px-2.5 py-0.5 rounded">★ 標本平均 $\overline{X}$ から母平均 $m$ を推定</span>
+              <span id="label-conf-1" class="text-xs font-bold text-brand-700">信頼度 95%</span>
+            </div>
+            <div id="formula-mean-ci" class="bg-white rounded-xl p-4 border border-brand-200 my-3 text-center overflow-x-auto">
+              $$\overline{X} - 1.96 \frac{\sigma}{\sqrt{n}} \leqq m \leqq \overline{X} + 1.96 \frac{\sigma}{\sqrt{n}}$$
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              ※ 区間表記では $\left[\,\overline{X} - k\dfrac{\sigma}{\sqrt{n}},\; \overline{X} + k\dfrac{\sigma}{\sqrt{n}}\,\right]$ と書きます。問題文に母標準偏差 $\sigma$ がないときは、標本標準偏差 $s$ をそのまま代入します。
+            </p>
+          </div>
+
+          <!-- 母比率 p の信頼区間 -->
+          <div class="rounded-xl border-2 border-emerald-200 bg-emerald-50/30 p-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded">★ 標本比率 $R$ から母比率 $p$ を推定</span>
+              <span id="label-conf-2" class="text-xs font-bold text-emerald-700">信頼度 95%</span>
+            </div>
+            <div id="formula-prop-ci" class="bg-white rounded-xl p-4 border border-emerald-200 my-3 text-center overflow-x-auto">
+              $$R - 1.96 \sqrt{\frac{R(1-R)}{n}} \leqq p \leqq R + 1.96 \sqrt{\frac{R(1-R)}{n}}$$
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              ※ 本来の標準偏差 $\sqrt{\dfrac{p(1-p)}{n}}$ に含まれる母比率 $p$ が未知なので、$n$ が大きいことを利用して標本比率 $R$ で置き換えています。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 深掘り解説：なぜ未知の σ の代わりに標本標準偏差 s を使ってよいのか？ -->
+      <div class="bg-gradient-to-br from-amber-50 via-white to-amber-50/40 rounded-2xl shadow-sm border-2 border-amber-300 p-6 sm:p-8">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-2.5 py-1 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center gap-1">
+            <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+            生徒の最大の疑問を解決！
+          </span>
+          <span class="text-xs font-bold text-amber-900">実戦演習で手が止まらないための必須知識</span>
+        </div>
+        <h3 class="text-xl font-black text-slate-900 mb-3">
+          なぜ母標準偏差 $\sigma$ の代わりに「標本の標準偏差 $s$」を代入してよいのか？
+        </h3>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div class="lg:col-span-5 bg-white p-4 rounded-xl border border-amber-200 shadow-sm space-y-3">
+            <div class="text-xs font-bold text-rose-600 uppercase">生徒が抱くもっともな疑問</div>
+            <p class="text-sm text-slate-800 font-medium leading-relaxed">
+              「母平均 $m$ が分からない（未知だ）から推定しているのに、なぜ公式 $\overline{X} \pm 1.96\dfrac{\sigma}{\sqrt{n}}$ の中にある母標準偏差 $\sigma$ は『知っている前提』なの？ 母集団全体が分からないなら $\sigma$ も分からないはずでは？」
+            </p>
+            <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
+              実際の入試や模試でも、「母標準偏差は与えず、抽出した $n=100$ 個のデータの<strong>標本標準偏差 $s$</strong> が与えられている」問題が頻出します。
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 space-y-3">
+            <div class="bg-white p-4 rounded-xl border border-amber-200">
+              <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+                <span class="w-5 h-5 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center">1</span>
+                <span>理由：$n$ が十分に大きいとき、$s$ は $\sigma$ に限りなく近づくから（一致性）</span>
+              </h4>
+              <p class="text-xs text-slate-600 leading-relaxed pl-7">
+                大数の法則により、標本の大きさ $n$ が十分に大きいとき（目安として $n \geqq 30\sim 100$）、手元の標本から計算した標準偏差 $s$ は真の母標準偏差 $\sigma$ とほぼ同じ値（$s \approx \sigma$）になります。そのため高校数学Bの枠組みでは、<strong>公式の $\sigma$ の位置にそのまま $s$ を代入してよい</strong>ことになっています。（※ $n$ が小さい場合は大学で学ぶ「$t$ 分布」を使います）
+              </p>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-amber-200">
+              <h4 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">2</span>
+                <span>母比率の推定と「まったく同じ発想」でつなげて理解しよう！</span>
+              </h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-7 mt-2 text-xs">
+                <div class="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <div class="font-bold text-emerald-900 mb-1">母比率 $p$ の区間推定（ノート1・7枚目）</div>
+                  <div>未知の母比率 $p$ を、標本比率 $R$ で代用：</div>
+                  $$\sqrt{\frac{p(1-p)}{n}} \;\longrightarrow\; \sqrt{\frac{\boldsymbol{R}(1-\boldsymbol{R})}{n}}$$
+                </div>
+                <div class="p-2.5 rounded-lg bg-brand-50 border border-brand-200">
+                  <div class="font-bold text-brand-900 mb-1">母平均 $m$ の区間推定</div>
+                  <div>未知の母標準偏差 $\sigma$ を、標本標準偏差 $s$ で代用：</div>
+                  $$\frac{\sigma}{\sqrt{n}} \;\longrightarrow\; \frac{\boldsymbol{s}}{\sqrt{n}}$$
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- インタラクティブ機能②：ノート7枚目の「信頼区間の真の意味」シミュレーター -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-white bg-emerald-600 px-2.5 py-1 rounded-full">インタラクティブ実験 ②</span>
+              <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full">ノート Page 7 の図を完全再現！</span>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mt-1">「信頼度95%」の本当の意味を体感する20回抽出シミュレーター</h3>
+            <p class="text-sm text-slate-600 mt-0.5">
+              母平均 $m$（赤い破線）は最初から固定された定数であり、動くのは標本から作った区間 $\left[\overline{X}-A,\; \overline{X}+A\right]$ の方です！
+            </p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <select id="ci-level-select" onchange="runCISimulation()" class="text-xs font-bold bg-slate-100 border border-slate-300 rounded-lg px-3 py-2.5 text-slate-800">
+              <option value="0.90">信頼度 90% (k=1.64)</option>
+              <option value="0.95" selected>信頼度 95% (k=1.96)</option>
+              <option value="0.99">信頼度 99% (k=2.58)</option>
+            </select>
+            <button onclick="runCISimulation()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-800 hover:bg-brand-700 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-sm transition-all">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              <span>標本を20セット再抽出する</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <!-- Canvas recreating Page 7 diagram -->
+          <div class="lg:col-span-8">
+            <div class="relative w-full h-80 sm:h-96 bg-white rounded-xl border-2 border-slate-200 p-2 shadow-inner">
+              <canvas id="ciCanvas" class="w-full h-full block"></canvas>
+            </div>
+          </div>
+
+          <!-- Explanation & Scoreboard -->
+          <div class="lg:col-span-4 space-y-4">
+            <div class="bg-slate-50 rounded-xl p-5 border border-slate-200">
+              <div class="text-xs font-bold text-slate-500 uppercase mb-2">今回の20セット抽出結果</div>
+              <div class="grid grid-cols-2 gap-3 text-center">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                  <div class="text-xs text-blue-800 font-bold">真の $m$ を含んだ</div>
+                  <div id="ci-hit-count" class="text-2xl font-black text-blue-700 mt-1">19 / 20</div>
+                  <div class="text-[11px] text-blue-600">青い区間</div>
+                </div>
+                <div class="bg-rose-50 border border-rose-200 rounded-xl p-3">
+                  <div class="text-xs text-rose-800 font-bold">外してしまった</div>
+                  <div id="ci-miss-count" class="text-2xl font-black text-rose-600 mt-1">1 / 20</div>
+                  <div class="text-[11px] text-rose-600">ピンク（赤）の区間</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs space-y-2 text-slate-800 leading-relaxed">
+              <div class="font-bold text-amber-900 flex items-center gap-1.5">
+                <i data-lucide="check-square" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                <span>共通テスト最頻出のひっかけポイント！</span>
+              </div>
+              <p>
+                <span class="text-rose-600 font-bold">× 誤解：</span> 「計算した1つの区間 $[48.2, 51.8]$ の中に、母平均 $m$ が飛び込んでくる確率が95%である」
+              </p>
+              <p>
+                <span class="text-emerald-700 font-bold">◎ 正解（ノート7枚目の通り）：</span> 「同じ方法で標本抽出と区間作成を<strong>100回繰り返したとき、そのうち約95個の区間が真の母平均 $m$ を含んでいる</strong>（20回なら約19本が含み、1本くらいはピンクの線のように外れる）」
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 5: 仮説検定と「日本語の壁」完全攻略 (ノート8枚目＋深掘り)
+         ========================================== -->
+    <section id="tab5" class="tab-content space-y-8">
+      
+      <!-- ノート8枚目の4ステップ整理 -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">ノート Page 8 対応</span>
+          <h3 class="text-xl font-black text-slate-900">仮説検定の4ステップ（確率的背理法の手順）</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-black text-brand-700 mb-1">STEP ①</div>
+            <div class="font-bold text-slate-900 text-sm mb-1">対立仮説 $H_1$ を立てる</div>
+            <p class="text-xs text-slate-600">自分が本当に主張したい仮説（「効果がある」「差がある」「確率が変わった」）。</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-black text-brand-700 mb-1">STEP ②</div>
+            <div class="font-bold text-slate-900 text-sm mb-1">帰無仮説 $H_0$ を立てる</div>
+            <p class="text-xs text-slate-600">$H_1$ を否定する当て馬の仮説（「偶然だ」「差はない」「今まで通り $m = m_0$」）。</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-black text-brand-700 mb-1">STEP ③</div>
+            <div class="font-bold text-slate-900 text-sm mb-1">$H_0$ のもとで標準化 $Z$ を計算</div>
+            <p class="text-xs text-slate-600">もし $H_0$ が正しいとした世界線で、今回の標本結果 $\overline{X}$ を標準化した $Z$ を求める。</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-xs font-black text-rose-600 mb-1">STEP ④</div>
+            <div class="font-bold text-slate-900 text-sm mb-1">棄却域に入るか判定</div>
+            <p class="text-xs text-slate-600">
+              ・<strong>棄却域に入る</strong> $\to H_0$ を棄却（$H_1$ が妥当！）<br>
+              ・<strong>入らない</strong> $\to H_0$ を棄却できない（結論は保留）
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- インタラクティブ機能③：仮説検定＆P値ビジュアライザー -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-white bg-rose-600 px-2.5 py-1 rounded-full">インタラクティブ実験 ③</span>
+              <span class="text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full">棄却域とP値を視覚化</span>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mt-1">仮説検定（片側・両側）＆ P値ビジュアライザー</h3>
+            <p class="text-sm text-slate-600 mt-0.5">
+              検定の種類・有意水準 $\alpha$・観測された統計量 $Z$ を動かして、「棄却される瞬間」と「結論の正しい日本語表現」を確認しよう！
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          <!-- Controls -->
+          <div class="lg:col-span-5 space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-200">
+            <!-- Tail Type -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">① 対立仮説 $H_1$ の向き（両側 / 片側）</label>
+              <div class="grid grid-cols-3 gap-1.5 bg-slate-200/80 p-1 rounded-lg">
+                <button onclick="setTestType('two')" id="test-two" class="test-type-btn py-1.5 px-2 rounded-md text-xs font-bold bg-white text-slate-900 shadow-sm transition-all">両側 ($m \neq m_0$)</button>
+                <button onclick="setTestType('right')" id="test-right" class="test-type-btn py-1.5 px-2 rounded-md text-xs font-bold text-slate-600 hover:bg-white/50 transition-all">右片側 ($m > m_0$)</button>
+                <button onclick="setTestType('left')" id="test-left" class="test-type-btn py-1.5 px-2 rounded-md text-xs font-bold text-slate-600 hover:bg-white/50 transition-all">左片側 ($m < m_0$)</button>
+              </div>
+            </div>
+
+            <!-- Alpha Level -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">② 有意水準 $\alpha$（偶然とみなさない基準の厳しさ）</label>
+              <div class="grid grid-cols-2 gap-2 bg-slate-200/80 p-1 rounded-lg">
+                <button onclick="setAlpha(0.05)" id="alpha-005" class="alpha-btn py-1.5 px-3 rounded-md text-xs font-bold bg-white text-slate-900 shadow-sm transition-all">普通：5% ($\alpha = 0.05$)</button>
+                <button onclick="setAlpha(0.01)" id="alpha-001" class="alpha-btn py-1.5 px-3 rounded-md text-xs font-bold text-slate-600 hover:bg-white/50 transition-all">きつめ：1% ($\alpha = 0.01$)</button>
+              </div>
+            </div>
+
+            <!-- Observed Z Slider -->
+            <div>
+              <div class="flex justify-between text-sm font-bold mb-1">
+                <label for="z-slider" class="text-slate-800">③ 観測された統計量 $Z$ の値</label>
+                <span id="z-val-display" class="text-brand-700 font-mono text-base">Z = 2.15</span>
+              </div>
+              <input type="range" id="z-slider" min="-3.2" max="3.2" step="0.05" value="2.15" class="w-full" oninput="updateHypothesisSim()">
+              <div class="flex justify-between text-[11px] text-slate-400 mt-1">
+                <span>$-3.2$</span>
+                <span>$0$ (帰無仮説どおり)</span>
+                <span>$+3.2$</span>
+              </div>
+            </div>
+
+            <!-- Live Verdict Box -->
+            <div id="verdict-box" class="rounded-xl p-4 border-2 transition-all bg-rose-50 border-rose-300">
+              <div class="flex items-center justify-between mb-1">
+                <span id="verdict-badge" class="text-xs font-black px-2 py-0.5 rounded bg-rose-600 text-white">帰無仮説 H₀ を棄却！</span>
+                <span id="pvalue-display" class="text-xs font-mono font-bold text-slate-700">P値 = 0.0316 (3.2%)</span>
+              </div>
+              <div id="verdict-title" class="font-bold text-slate-900 text-sm mt-1">
+                棄却域に入りました → 対立仮説 $H_1$ が妥当！
+              </div>
+              <p id="verdict-desc" class="text-xs text-slate-700 mt-1 leading-relaxed">
+                もし $H_0$（ただの偶然）が正しいとしたら、これほど極端なデータが出る確率はわずか 3.2% しかありません。有意水準 5% 未満のレア現象なので「偶然という言い訳には無理がある」と判断します。
+              </p>
+            </div>
+          </div>
+
+          <!-- Canvas Chart -->
+          <div class="lg:col-span-7 flex flex-col">
+            <div class="relative w-full h-72 sm:h-80 bg-slate-900 rounded-xl p-3 border border-slate-800 shadow-inner">
+              <canvas id="hypoCanvas" class="w-full h-full block"></canvas>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-6 mt-3 text-xs text-slate-600">
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded-sm bg-rose-500/70 border border-rose-400 inline-block"></span>
+                <span>棄却域（面積＝有意水準 $\alpha$）</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block"></span>
+                <span>観測された統計量 $Z$ の位置</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 深掘り解説：生徒がつまずく「仮説検定の日本語」完全翻訳辞典 -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-white bg-brand-800 px-2.5 py-1 rounded-full">深掘り解説</span>
+          <h3 class="text-xl font-black text-slate-900">生徒がつまずく「仮説検定の日本語」翻訳辞典（5大ポイント）</h3>
+        </div>
+        <p class="text-sm text-slate-600">
+          仮説検定は計算よりも「日常語の感覚」と「統計学の厳密な言い回し」のギャップで混乱します。授業の解説やテスト対策でそのまま使える5つの重要ロジックです。
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Point 1: 採択と言わず棄却しないと言う理由 -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-6 h-6 rounded-lg bg-brand-800 text-white text-xs font-bold flex items-center justify-center shrink-0">1</span>
+              <h4 class="font-bold text-slate-900 text-base">なぜ「$H_0$ を採択する」と言わず「棄却しない（保留）」と言うのか？</h4>
+            </div>
+            <div class="space-y-2.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <span class="font-bold text-rose-600">× 日常語の誤解：</span> 「疑いが晴れた（棄却されなかった）なら、帰無仮説 $H_0$ が正しいと証明されたってことだよね？」
+              </div>
+              <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                <span class="font-bold text-emerald-800">◎ 統計学の論理（裁判の推定無罪モデル）：</span><br>
+                裁判で「有罪の決定的な証拠が見つからず無罪（処分保留）になった」からといって、「被告人が100%潔白であると証明された」わけではありません。<br>
+                同様に、棄却域に入らなかったのは<strong>「$H_0$ が間違っていると断定するだけの証拠が足りなかった（証拠不十分で保留）」</strong>にすぎません。
+              </div>
+            </div>
+          </div>
+
+          <!-- Point 2: 帰無仮説という言葉と背理法 -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-6 h-6 rounded-lg bg-brand-800 text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
+              <h4 class="font-bold text-slate-900 text-base">「帰無仮説（$H_0$）」という難しい漢語の正体と「背理法」</h4>
+            </div>
+            <div class="space-y-2.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <p>
+                <strong>言葉の由来：</strong> 「無（効果なし・差がない・ただの偶然）に帰（き）する仮説」、あるいは<strong>「後で叩き潰して無に帰すために、あえて立てる当て馬の仮説」</strong>です。
+              </p>
+              <div class="p-3 rounded-xl bg-brand-50/70 border border-brand-200 space-y-1">
+                <div class="font-bold text-brand-900">数学Aの「背理法」との比較：</div>
+                <div>・<strong>数学Aの背理法：</strong> 命題の否定を仮定し、「論理的な<strong>矛盾（起きる確率 $0\%$）</strong>」を導いてひっくり返す。</div>
+                <div>・<strong>統計の仮説検定：</strong> 主張の否定（$H_0$）を仮定し、「現実的に<strong>めったに起きない極小確率（$5\%$ 未満）</strong>」を導いてひっくり返す（＝<strong>確率的背理法</strong>）。</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Point 3: 有意水準5%の「有意」とは -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-6 h-6 rounded-lg bg-brand-800 text-white text-xs font-bold flex items-center justify-center shrink-0">3</span>
+              <h4 class="font-bold text-slate-900 text-base">「有意水準 $5\%$」や「有意な差」の『有意』とはどういう意味？</h4>
+            </div>
+            <div class="space-y-2.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <span class="font-bold text-rose-600">× 日常語の誤解：</span> 「5%ぶん意味がある」「5%の効果がある」「すごく大きな差がある」
+              </div>
+              <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200">
+                <span class="font-bold text-amber-900">◎ 統計学の本来意味：</span><br>
+                英語の <em>statistically significant</em> の訳語で、<strong>「ただの偶然の誤差（ブレ）として片付けるには無理がある（意味のある差だ）」</strong>という意味です。<br>
+                差の「大きさ」ではなく、<strong>「偶然という言い訳が通用しない確からしさ」</strong>を表しています。
+              </div>
+            </div>
+          </div>
+
+          <!-- Point 4: P値の主語と条件付き確率の罠 -->
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-6 h-6 rounded-lg bg-brand-800 text-white text-xs font-bold flex items-center justify-center shrink-0">4</span>
+              <h4 class="font-bold text-slate-900 text-base">P値（P-value）の「主語の入れ替わり」に要注意！</h4>
+            </div>
+            <div class="space-y-2.5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <p>
+                例えば計算の結果 $P = 0.03\;(3\%)$ となったとき、これを「帰無仮説 $H_0$ が正しい確率が $3\%$ だ」と解釈するのは<strong>誤り</strong>です。
+              </p>
+              <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center text-xs overflow-x-auto">
+                $$\text{誤： } P(H_0\text{が真} \mid \text{データ}) \quad \neq \quad \text{正： } P(\text{今回以上に極端なデータ} \mid H_0\text{が真})$$
+              </div>
+              <p class="text-xs text-slate-600">
+                あくまで<strong>「もし $H_0$ が100%正しい世界線だとしたら、今回のデータがどれくらいレアキャラか」</strong>を計算しているだけです。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 5: 第1種の過誤と第2種の過誤 (トレードオフ表) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-6 h-6 rounded-lg bg-brand-800 text-white text-xs font-bold flex items-center justify-center shrink-0">5</span>
+            <h4 class="font-bold text-slate-900 text-base">2種類の過誤（第1種の過誤 ＝ 冤罪 $\alpha$ ／ 第2種の過誤 ＝ 見逃し $\beta$）</h4>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-600 mb-4">
+            確率的な判断である以上、どれだけ正しく計算しても「運悪くレアな標本を引いてしまい判断を誤るリスク」が2種類存在します。
+          </p>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs sm:text-sm border-collapse border border-slate-200 rounded-xl overflow-hidden">
+              <thead>
+                <tr class="bg-slate-100 text-slate-800">
+                  <th class="border border-slate-200 p-3 text-left">検定の判定 ＼ 真実（神様視点）</th>
+                  <th class="border border-slate-200 p-3 text-center">実は $H_0$ が正しい（無実・差はない）</th>
+                  <th class="border border-slate-200 p-3 text-center">実は $H_1$ が正しい（犯人・差がある）</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="border border-slate-200 p-3 font-bold bg-slate-50">$H_0$ を棄却する<br><span class="text-xs font-normal text-slate-500">（「有罪・差がある」と判定）</span></td>
+                  <td class="border border-slate-200 p-3 bg-rose-50 text-center">
+                    <div class="font-black text-rose-700">第1種の過誤（確率 $\alpha$＝有意水準）</div>
+                    <div class="text-xs text-rose-800 mt-0.5">【あわて者の誤り・冤罪】<br>本当は差がないのに「差がある！」と誤認</div>
+                  </td>
+                  <td class="border border-slate-200 p-3 bg-emerald-50/50 text-center font-bold text-emerald-800">
+                    正しい判定（検出力 $1-\beta$）
+                  </td>
+                </tr>
+                <tr>
+                  <td class="border border-slate-200 p-3 font-bold bg-slate-50">$H_0$ を棄却しない<br><span class="text-xs font-normal text-slate-500">（「保留・差があるとは言えない」）</span></td>
+                  <td class="border border-slate-200 p-3 bg-emerald-50/50 text-center font-bold text-emerald-800">
+                    正しい判定（確率 $1-\alpha$）
+                  </td>
+                  <td class="border border-slate-200 p-3 bg-amber-50 text-center">
+                    <div class="font-black text-amber-800">第2種の過誤（確率 $\beta$）</div>
+                    <div class="text-xs text-amber-900 mt-0.5">【ぼんやり者の誤り・見逃し】<br>本当は効果があるのに「証拠不十分」で見逃す</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-4 py-2.5 rounded-lg border border-slate-200">
+            <span><strong>💡 トレードオフの法則：</strong> 冤罪（第1種）を減らそうとして有意水準を $5\% \to 1\%$ に厳しくすると、逆に慎重になりすぎて見逃し（第2種）が増えます。</span>
+            <span class="font-bold text-brand-800">⇒ 両方のミスを同時に減らす唯一の方法は「サンプルサイズ $n$ を増やすこと」！</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-5 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+      <div>高校数学B「統計的な推測」体系まとめ＆実験ラボ（自作ノート全8ページ＋深掘り解説統合）</div>
+      <div class="flex items-center gap-4">
+        <span>二項分布・正規分布・中心極限定理・区間推定・仮説検定</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       JavaScript Logic & Interactive Simulators
+       ========================================== -->
+  <script>
+    // Initialize Lucide icons & KaTeX
+    function renderAllMath() {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    // Tab Navigation Logic
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.getElementById(tabId).classList.add('active');
+
+      // Update Tab Button Styles
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.className = "tab-btn group inline-flex items-center gap-2 py-3 px-4 border-b-2 font-bold text-sm whitespace-nowrap transition-all border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300 rounded-t-lg";
+        const badge = btn.querySelector('span:first-child');
+        if (badge) {
+          badge.className = "w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center group-hover:bg-slate-300";
+        }
+      });
+
+      const activeBtn = document.getElementById('btn-' + tabId);
+      if (activeBtn) {
+        activeBtn.className = "tab-btn group inline-flex items-center gap-2 py-3 px-4 border-b-2 font-bold text-sm whitespace-nowrap transition-all border-brand-800 text-brand-800 bg-brand-50/50 rounded-t-lg";
+        const activeBadge = activeBtn.querySelector('span:first-child');
+        if (activeBadge) {
+          activeBadge.className = "w-5 h-5 rounded-full bg-brand-800 text-white text-xs flex items-center justify-center";
+        }
+      }
+
+      // Redraw Canvases when their tab becomes visible
+      setTimeout(() => {
+        if (tabId === 'tab2') updateBinomSim();
+        if (tabId === 'tab4') drawCICanvas();
+        if (tabId === 'tab5') updateHypothesisSim();
+      }, 30);
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ==========================================
+    // SIMULATOR 1: Binomial to Normal Approximation (Tab 2)
+    // ==========================================
+    function logGamma(z) {
+      // Lanczos approximation for log(k!) = logGamma(k+1)
+      const c = [
+        76.18009172947146, -86.50532032941677,
+        24.01409824083091, -1.231739572450155,
+        0.001208650973866179, -0.000005395239384953
+      ];
+      let x = z;
+      let y = z;
+      let tmp = x + 5.5;
+      tmp -= (x + 0.5) * Math.log(tmp);
+      let ser = 1.000000000190015;
+      for (let j = 0; j < 6; j++) {
+        y += 1;
+        ser += c[j] / y;
+      }
+      return -tmp + Math.log(2.5066282746310005 * ser / x);
+    }
+
+    function binomPMF(n, k, p) {
+      if (k < 0 || k > n) return 0;
+      if (p === 0) return k === 0 ? 1 : 0;
+      if (p === 1) return k === n ? 1 : 0;
+      const logComb = logGamma(n + 1) - logGamma(k + 1) - logGamma(n - k + 1);
+      const logProb = logComb + k * Math.log(p) + (n - k) * Math.log(1 - p);
+      return Math.exp(logProb);
+    }
+
+    function normalPDF(x, mean, sd) {
+      const z = (x - mean) / sd;
+      return (1 / (Math.sqrt(2 * Math.PI) * sd)) * Math.exp(-0.5 * z * z);
+    }
+
+    function updateBinomSim() {
+      const nInput = document.getElementById('binom-n');
+      const pInput = document.getElementById('binom-p');
+      if (!nInput || !pInput) return;
+
+      const n = parseInt(nInput.value, 10);
+      const p = parseFloat(pInput.value);
+      const m = n * p;
+      const v = n * p * (1 - p);
+      const sd = Math.sqrt(v);
+
+      document.getElementById('binom-n-val').textContent = n;
+      document.getElementById('binom-p-val').textContent = p.toFixed(2);
+      document.getElementById('binom-m').textContent = m.toFixed(1);
+      document.getElementById('binom-v').textContent = v.toFixed(2);
+      document.getElementById('binom-sd').textContent = sd.toFixed(2);
+
+      const canvas = document.getElementById('binomCanvas');
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const W = rect.width;
+      const H = rect.height;
+      const pad = { top: 24, right: 24, bottom: 36, left: 46 };
+      const plotW = W - pad.left - pad.right;
+      const plotH = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Determine visible X range around mean
+      const minX = Math.max(0, Math.floor(m - 4.2 * sd));
+      const maxX = Math.min(n, Math.ceil(m + 4.2 * sd));
+      const rangeX = Math.max(1, maxX - minX);
+
+      const maxY = Math.max(normalPDF(m, m, sd), binomPMF(n, Math.round(m), p)) * 1.18;
+
+      // Grid lines
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.top + (plotH * i) / 4;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(W - pad.right, y);
+        ctx.stroke();
+
+        const val = (maxY * (4 - i) / 4).toFixed(2);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(val, pad.left - 6, y + 4);
+      }
+
+      // Draw Binomial Bars
+      const barStep = plotW / (rangeX + 1);
+      const barW = Math.max(1.5, barStep * 0.78);
+
+      for (let k = minX; k <= maxX; k++) {
+        const prob = binomPMF(n, k, p);
+        const cx = pad.left + ((k - minX + 0.5) / (rangeX + 1)) * plotW;
+        const barH = (prob / maxY) * plotH;
+        const y = pad.top + plotH - barH;
+
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.65)';
+        ctx.strokeStyle = 'rgba(96, 165, 250, 0.9)';
+        ctx.lineWidth = 1;
+        ctx.fillRect(cx - barW / 2, y, barW, barH);
+        if (barW > 4) {
+          ctx.strokeRect(cx - barW / 2, y, barW, barH);
+        }
+      }
+
+      // Draw Normal Curve N(np, np(1-p))
+      ctx.beginPath();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2.8;
+      const steps = 200;
+      for (let i = 0; i <= steps; i++) {
+        const xVal = (minX - 0.5) + (i / steps) * (rangeX + 1);
+        const dens = normalPDF(xVal, m, sd);
+        const px = pad.left + (i / steps) * plotW;
+        const py = pad.top + plotH - (dens / maxY) * plotH;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Mean vertical line
+      const meanPx = pad.left + ((m - minX + 0.5) / (rangeX + 1)) * plotW;
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#f87171';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(meanPx, pad.top);
+      ctx.lineTo(meanPx, pad.top + plotH);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = '#fca5a5';
+      ctx.font = 'bold 11px Inter, Noto Sans JP, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`m = np = ${m.toFixed(1)}`, meanPx, pad.top - 6);
+
+      // X-axis labels
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '11px Inter, sans-serif';
+      const tickCount = Math.min(8, rangeX);
+      const tickStep = Math.max(1, Math.round(rangeX / tickCount));
+      for (let k = minX; k <= maxX; k += tickStep) {
+        const cx = pad.left + ((k - minX + 0.5) / (rangeX + 1)) * plotW;
+        ctx.fillText(k, cx, H - 12);
+      }
+    }
+
+    // ==========================================
+    // Tab 4: Confidence Coefficient Switcher & CI Simulator
+    // ==========================================
+    function setConfidenceCoeff(kStr, labelStr) {
+      document.querySelectorAll('.coeff-btn').forEach(btn => {
+        btn.className = "coeff-btn px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:bg-white transition-all";
+      });
+      const idMap = { '1.64': 'coeff-90', '1.96': 'coeff-95', '2.58': 'coeff-99' };
+      const activeBtn = document.getElementById(idMap[kStr]);
+      if (activeBtn) {
+        activeBtn.className = "coeff-btn px-3 py-1 rounded-lg text-xs font-bold bg-brand-800 text-white shadow-sm transition-all";
+      }
+
+      document.getElementById('label-conf-1').textContent = `信頼度 ${labelStr}`;
+      document.getElementById('label-conf-2').textContent = `信頼度 ${labelStr}`;
+
+      const meanBox = document.getElementById('formula-mean-ci');
+      const propBox = document.getElementById('formula-prop-ci');
+      meanBox.innerHTML = `$$\\overline{X} - ${kStr} \\frac{\\sigma}{\\sqrt{n}} \\leqq m \\leqq \\overline{X} + ${kStr} \\frac{\\sigma}{\\sqrt{n}}$$`;
+      propBox.innerHTML = `$$R - ${kStr} \\sqrt{\\frac{R(1-R)}{n}} \\leqq p \\leqq R + ${kStr} \\sqrt{\\frac{R(1-R)}{n}}$$`;
+      renderAllMath();
+    }
+
+    // CI Simulator State (Recreating Notebook Page 7)
+    let ciSamples = [];
+    const TRUE_M = 50;
+    const TRUE_SE = 2.5; // sigma / sqrt(n)
+
+    function randn_bm() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    function runCISimulation() {
+      const selectEl = document.getElementById('ci-level-select');
+      const confLevel = selectEl ? parseFloat(selectEl.value) : 0.95;
+      const kMap = { 0.90: 1.645, 0.95: 1.96, 0.99: 2.576 };
+      const k = kMap[confLevel] || 1.96;
+      const halfWidth = k * TRUE_SE;
+
+      ciSamples = [];
+      let hits = 0;
+      for (let i = 0; i < 20; i++) {
+        const xbar = TRUE_M + randn_bm() * TRUE_SE;
+        const low = xbar - halfWidth;
+        const high = xbar + halfWidth;
+        const hit = (low <= TRUE_M && TRUE_M <= high);
+        if (hit) hits++;
+        ciSamples.push({ xbar, low, high, hit, halfWidth });
+      }
+
+      const hitEl = document.getElementById('ci-hit-count');
+      const missEl = document.getElementById('ci-miss-count');
+      if (hitEl) hitEl.textContent = `${hits} / 20`;
+      if (missEl) missEl.textContent = `${20 - hits} / 20`;
+
+      drawCICanvas();
+    }
+
+    function drawCICanvas() {
+      const canvas = document.getElementById('ciCanvas');
+      if (!canvas || ciSamples.length === 0) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const W = rect.width;
+      const H = rect.height;
+      const pad = { top: 38, right: 30, bottom: 32, left: 30 };
+      const plotW = W - pad.left - pad.right;
+      const plotH = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const minVal = TRUE_M - 4.2 * TRUE_SE;
+      const maxVal = TRUE_M + 4.2 * TRUE_SE;
+      const valToX = (v) => pad.left + ((v - minVal) / (maxVal - minVal)) * plotW;
+
+      // Draw each of the 20 horizontal interval bars (Notebook Page 7 style!)
+      const rowH = plotH / 20;
+      ciSamples.forEach((s, idx) => {
+        const y = pad.top + (idx + 0.5) * rowH;
+        const xLow = valToX(s.low);
+        const xHigh = valToX(s.high);
+        const xMid = valToX(s.xbar);
+
+        const color = s.hit ? '#2563eb' : '#f43f5e'; // Blue if hit, Pink/Red if miss (exact match to Page 7!)
+        const bgHighlight = s.hit ? 'transparent' : 'rgba(244, 63, 94, 0.08)';
+
+        if (!s.hit) {
+          ctx.fillStyle = bgHighlight;
+          ctx.fillRect(pad.left, y - rowH / 2, plotW, rowH);
+        }
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = s.hit ? 2.2 : 2.8;
+
+        // Horizontal bar
+        ctx.beginPath();
+        ctx.moveTo(xLow, y);
+        ctx.lineTo(xHigh, y);
+        ctx.stroke();
+
+        // Left & Right end caps
+        const capH = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(xLow, y - capH);
+        ctx.lineTo(xLow, y + capH);
+        ctx.moveTo(xHigh, y - capH);
+        ctx.lineTo(xHigh, y + capH);
+        // Center tick (X-bar)
+        ctx.moveTo(xMid, y - capH);
+        ctx.lineTo(xMid, y + capH);
+        ctx.stroke();
+      });
+
+      // Top annotation for -A and +A on first bar (like Page 7 top drawing)
+      const first = ciSamples[0];
+      if (first) {
+        const y0 = pad.top + 0.5 * rowH;
+        const xMid = valToX(first.xbar);
+        ctx.fillStyle = '#1e40af';
+        ctx.font = 'bold 11px Inter, Noto Sans JP, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('標本平均 x̄ ± A', xMid, y0 - 9);
+      }
+
+      // Vertical dashed red line for true population mean m (Notebook Page 7 centerpiece)
+      const mX = valToX(TRUE_M);
+      ctx.save();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(mX, pad.top - 14);
+      ctx.lineTo(mX, H - pad.bottom + 6);
+      ctx.stroke();
+      ctx.restore();
+
+      // Label "真の母平均 m" at bottom & top
+      ctx.fillStyle = '#dc2626';
+      ctx.font = 'bold 13px Inter, Noto Sans JP, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('真の母平均 m (未知だが固定)', mX, H - 8);
+    }
+
+    // ==========================================
+    // SIMULATOR 3: Hypothesis Testing & P-value Visualizer (Tab 5)
+    // ==========================================
+    let testState = {
+      type: 'two', // 'two' | 'right' | 'left'
+      alpha: 0.05,
+      z: 2.15
+    };
+
+    // Standard Normal CDF approximation (Abramowitz & Stegun)
+    function normCDF(x) {
+      const a1 =  0.254829592;
+      const a2 = -0.284496736;
+      const a3 =  1.421413741;
+      const a4 = -1.453152027;
+      const a5 =  1.061405429;
+      const p  =  0.3275911;
+      const sign = x < 0 ? -1 : 1;
+      const absX = Math.abs(x) / Math.sqrt(2.0);
+      const t = 1.0 / (1.0 + p * absX);
+      const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-absX * absX);
+      return 0.5 * (1.0 + sign * y);
+    }
+
+    function setTestType(type) {
+      testState.type = type;
+      document.querySelectorAll('.test-type-btn').forEach(btn => {
+        btn.className = "test-type-btn py-1.5 px-2 rounded-md text-xs font-bold text-slate-600 hover:bg-white/50 transition-all";
+      });
+      const activeBtn = document.getElementById('test-' + type);
+      if (activeBtn) {
+        activeBtn.className = "test-type-btn py-1.5 px-2 rounded-md text-xs font-bold bg-white text-slate-900 shadow-sm transition-all";
+      }
+      updateHypothesisSim();
+    }
+
+    function setAlpha(alphaVal) {
+      testState.alpha = alphaVal;
+      document.querySelectorAll('.alpha-btn').forEach(btn => {
+        btn.className = "alpha-btn py-1.5 px-3 rounded-md text-xs font-bold text-slate-600 hover:bg-white/50 transition-all";
+      });
+      const id = alphaVal === 0.05 ? 'alpha-005' : 'alpha-001';
+      const activeBtn = document.getElementById(id);
+      if (activeBtn) {
+        activeBtn.className = "alpha-btn py-1.5 px-3 rounded-md text-xs font-bold bg-white text-slate-900 shadow-sm transition-all";
+      }
+      updateHypothesisSim();
+    }
+
+    function getCriticalValues(type, alpha) {
+      if (type === 'two') {
+        const c = alpha === 0.05 ? 1.96 : 2.58;
+        return { left: -c, right: c };
+      } else if (type === 'right') {
+        const c = alpha === 0.05 ? 1.645 : 2.33;
+        return { left: null, right: c };
+      } else {
+        const c = alpha === 0.05 ? -1.645 : -2.33;
+        return { left: c, right: null };
+      }
+    }
+
+    function updateHypothesisSim() {
+      const zSlider = document.getElementById('z-slider');
+      if (!zSlider) return;
+      const z = parseFloat(zSlider.value);
+      testState.z = z;
+
+      document.getElementById('z-val-display').textContent = `Z = ${z >= 0 ? '+' : ''}${z.toFixed(2)}`;
+
+      const crit = getCriticalValues(testState.type, testState.alpha);
+      let isRejected = false;
+      let pVal = 1.0;
+
+      if (testState.type === 'two') {
+        isRejected = Math.abs(z) >= crit.right;
+        pVal = 2 * (1 - normCDF(Math.abs(z)));
+      } else if (testState.type === 'right') {
+        isRejected = z >= crit.right;
+        pVal = 1 - normCDF(z);
+      } else {
+        isRejected = z <= crit.left;
+        pVal = normCDF(z);
+      }
+
+      // Update Verdict UI
+      const box = document.getElementById('verdict-box');
+      const badge = document.getElementById('verdict-badge');
+      const title = document.getElementById('verdict-title');
+      const desc = document.getElementById('verdict-desc');
+      const pDisplay = document.getElementById('pvalue-display');
+
+      const pPct = (pVal * 100).toFixed(1);
+      const alphaPct = (testState.alpha * 100).toFixed(0);
+      pDisplay.textContent = `P値 = ${pVal.toFixed(4)} (${pPct}%)`;
+
+      if (isRejected) {
+        box.className = "rounded-xl p-4 border-2 transition-all bg-rose-50 border-rose-300";
+        badge.className = "text-xs font-black px-2 py-0.5 rounded bg-rose-600 text-white";
+        badge.textContent = "帰無仮説 H₀ を棄却！";
+        title.textContent = "棄却域に入りました → 対立仮説 H₁ が妥当（有意差あり）";
+        desc.textContent = `もし H₀（ただの偶然）が正しいとしたら、これほど極端な値が出る確率（P値）は ${pPct}% しかなく、有意水準 ${alphaPct}% 未満です。したがって「偶然という言い訳には無理がある」として H₀ を棄却します。`;
+      } else {
+        box.className = "rounded-xl p-4 border-2 transition-all bg-slate-100 border-slate-300";
+        badge.className = "text-xs font-black px-2 py-0.5 rounded bg-slate-700 text-white";
+        badge.textContent = "H₀ を棄却できない（保留）";
+        title.textContent = "棄却域に入りませんでした → 差があるとは言えない（証拠不十分）";
+        desc.textContent = `H₀ のもとでこのデータが出る確率（P値）は ${pPct}% あり、有意水準 ${alphaPct}% 以上なので「単なる偶然のブレでも十分に起こりうる範囲」です。※ H₀ が正しいと証明されたわけではありません！`;
+      }
+
+      // Draw Canvas
+      const canvas = document.getElementById('hypoCanvas');
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const W = rect.width;
+      const H = rect.height;
+      const pad = { top: 28, right: 24, bottom: 38, left: 24 };
+      const plotW = W - pad.left - pad.right;
+      const plotH = H - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const minZ = -3.6;
+      const maxZ = 3.6;
+      const maxDens = normalPDF(0, 0, 1) * 1.15;
+
+      const zToX = (zv) => pad.left + ((zv - minZ) / (maxZ - minZ)) * plotW;
+      const dToY = (dv) => pad.top + plotH - (dv / maxDens) * plotH;
+
+      // Helper to shade region under normal curve
+      function shadeRegion(zStart, zEnd, fillStyle) {
+        ctx.save();
+        ctx.beginPath();
+        const steps = 80;
+        ctx.moveTo(zToX(zStart), dToY(0));
+        for (let i = 0; i <= steps; i++) {
+          const zv = zStart + (i / steps) * (zEnd - zStart);
+          ctx.lineTo(zToX(zv), dToY(normalPDF(zv, 0, 1)));
+        }
+        ctx.lineTo(zToX(zEnd), dToY(0));
+        ctx.closePath();
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Shade Acceptance Region
+      shadeRegion(minZ, maxZ, 'rgba(148, 163, 184, 0.12)');
+
+      // Shade Rejection Region(s) in Red
+      if (crit.left !== null) {
+        shadeRegion(minZ, crit.left, 'rgba(244, 63, 94, 0.65)');
+      }
+      if (crit.right !== null) {
+        shadeRegion(crit.right, maxZ, 'rgba(244, 63, 94, 0.65)');
+      }
+
+      // Draw Standard Normal Curve
+      ctx.beginPath();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2.5;
+      const totalSteps = 200;
+      for (let i = 0; i <= totalSteps; i++) {
+        const zv = minZ + (i / totalSteps) * (maxZ - minZ);
+        const px = zToX(zv);
+        const py = dToY(normalPDF(zv, 0, 1));
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Baseline
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, dToY(0));
+      ctx.lineTo(W - pad.right, dToY(0));
+      ctx.stroke();
+
+      // Draw Critical Value Boundary Lines
+      ctx.fillStyle = '#fda4af';
+      ctx.font = 'bold 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      if (crit.left !== null) {
+        const cx = zToX(crit.left);
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, pad.top + 10);
+        ctx.lineTo(cx, dToY(0));
+        ctx.stroke();
+        ctx.fillText(`境界 ${crit.left.toFixed(2)}`, cx, H - 20);
+      }
+      if (crit.right !== null) {
+        const cx = zToX(crit.right);
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, pad.top + 10);
+        ctx.lineTo(cx, dToY(0));
+        ctx.stroke();
+        ctx.fillText(`境界 +${crit.right.toFixed(2)}`, cx, H - 20);
+      }
+
+      // Center 0 label
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('0', zToX(0), H - 20);
+
+      // Observed Z Marker
+      const obsX = zToX(z);
+      const obsY = dToY(normalPDF(z, 0, 1));
+
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(obsX, pad.top);
+      ctx.lineTo(obsX, dToY(0));
+      ctx.stroke();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(obsX, obsY, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Label Observed Z
+      ctx.fillStyle = '#fde68a';
+      ctx.font = 'bold 12px Inter, Noto Sans JP, sans-serif';
+      ctx.fillText(`観測値 Z = ${z >= 0 ? '+' : ''}${z.toFixed(2)}`, obsX, pad.top - 8);
+    }
+
+    // Window Load & Resize Handlers
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      renderAllMath();
+      updateBinomSim();
+      runCISimulation();
+      updateHypothesisSim();
+    });
+
+    window.addEventListener('resize', () => {
+      updateBinomSim();
+      drawCICanvas();
+      updateHypothesisSim();
+    });
+  </script>
+</body>
+</html>
