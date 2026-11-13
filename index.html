@@ -12,7 +12,9 @@
             text-align: center;
         }
         .container {
-            max-width: 500px;
+            width: 95%;        /* 画面の95%まで使う */
+            max-width: 1100px; /* 👈 4列がゆったり並ぶ広さに変更！ */
+
             margin: 20px auto;
             background: white;
             padding: 30px;
@@ -54,17 +56,37 @@
             transform: translateY(-1px);
         }
         
-        /* 3. 画面が広いときだけ2列にする設定（2カラム化） */
-        .button-group {
-           display: grid;
-           gap: 15px;
-           grid-template-columns: 1fr; /* 基本は1列 */
-        }
-        @media (min-width: 768px) {
-        .button-group {
-           grid-template-columns: repeat(4, 1fr); /* iPadなど広い画面では4列 */
-        }
-        }
+/* 基本設定（スマホなどの狭い画面では1列） */
+.button-group {
+    display: grid;
+    gap: 15px;
+    grid-template-columns: 1fr; 
+}
+
+/* 少し広い画面（iPad縦向きなど：600px以上）では2列 */
+@media (min-width: 600px) {
+    .button-group {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 広い画面（PC・iPad横向き・電子黒板：960px以上）では4列！ */
+@media (min-width: 960px) {
+    .button-group {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ボタンの高さを揃えて、文字を中央に綺麗に表示する調整 */
+.button-group .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    margin: 0; /* もし既存のボタンに上下の余白(margin)があればリセット */
+    padding: 15px 10px;
+}
 
         /* 4. タップした時に押し込むような反応をつける */
         .btn:active {
